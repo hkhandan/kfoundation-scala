@@ -40,7 +40,7 @@ class TokenWalker(file: String, tokens: Seq[Token[_]]) {
       throw syntaxError(symbol.toString)
 
   def expect[T <: Token[_]](cls: Class[T]): T = thisToken match {
-    case Some(t: T) => step(); t
+    case Some(t) if t.getClass.equals(cls) =>  step(); t.asInstanceOf[T]
     case _ => throw syntaxError(cls.getSimpleName)
   }
 

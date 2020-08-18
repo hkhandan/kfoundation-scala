@@ -45,6 +45,12 @@ class TokenSeqBuilder {
   def op(str: UString): TokenSeqBuilder =
     add(new OperatorToken(step(str), str))
 
-  def getTokens: Seq[Token[_]] = tokens.toSeq
+  def n(i: Long): TokenSeqBuilder =
+    add(new IntegralToken(step(i.toString), i))
+
+  def n(d: Double): TokenSeqBuilder =
+    add(new DecimalToken(step(d.toString), d))
+
+  def getTokens: Seq[Token[_]] = tokens
   def buildWalker: TokenWalker = new TokenWalker(FILE_NAME, getTokens)
 }
