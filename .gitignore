@@ -3,7 +3,9 @@
 # Project specific excludes
 #
 
-tomcat
+/js
+/jvm
+/shared
 
 #
 # Default excludes
