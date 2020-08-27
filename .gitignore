@@ -5,7 +5,7 @@
 
 /js
 /jvm
-/shared
+scala-gen
 
 #
 # Default excludes
@@ -63,4 +63,3 @@ pom.xml.tag
 reports/
 temp/
 tmp/
-target/

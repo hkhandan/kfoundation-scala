@@ -2,6 +2,8 @@ package net.kfoundation
 
 import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 
+import net.kfoundation.encoding.MurmurHash3
+
 import scala.annotation.tailrec
 import scala.language.implicitConversions
 
@@ -61,12 +63,17 @@ object UChar {
     def nextUChar: Option[UChar] = {
       val ch = nextCodePoint
       if (ch >= 0) {
-        Some(new UChar(ch, buffer.slice(0, delta)))
+        Some(new UChar(ch, getLastReadOctets))
       } else
         None
     }
 
     def getNumberOfLastOctetsRead: Int = delta
+
+    def getLastReadOctets: Array[Byte] = buffer.slice(0, delta)
+
+    def writeLastReadOctetsTo(output: OutputStream): Unit =
+      output.write(buffer, 0, delta)
 
     @tailrec
     private def fillBufferAndDecode(i: Int, n: Int): Int = if(n == i) {
@@ -122,6 +129,8 @@ object UChar {
 
   class StreamUtf8Reader(private val stream: InputStream) extends Utf8Reader {
     override def nextOctet: Int = stream.read()
+    def mark(len: Int): Unit = stream.mark(len)
+    def reset(): Unit = stream.reset()
   }
 
   private val NXT : Int = 0x80
@@ -279,8 +288,8 @@ class UChar private (val codePoint: Int, private val utf8: Array[Byte]) {
   def toUpperCase: UChar = new UChar(Character.toUpperCase(codePoint))
 
   def getUtf8Length: Int = utf8.length
-  def toUtf8: Seq[Byte] = wrap(utf8)
-  def toUtf16: Seq[Char] = wrap(encodeUtf16(codePoint))
+  def toUtf8: Array[Byte] = utf8
+  def toUtf16: Array[Char] = encodeUtf16(codePoint)
   def printToStream(os: OutputStream): Unit = os.write(utf8)
   def appendTo(builder: StringBuilder): Unit = builder.appendAll(toUtf16)
 

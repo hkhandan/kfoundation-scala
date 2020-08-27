@@ -18,6 +18,7 @@ class UCharTest extends AnyFunSuite {
   private val testUtf8 = bytes(0x61, 0xE3, 0x80, 0x80, 0xf0, 0x90, 0x90, 0xb7)
 
   private def byteSeq(list: Int*): Seq[Byte] = list.map(_.toByte)
+  //noinspection SameParameterValue
   private def bytes(list: Int*): Array[Byte] = byteSeq(list:_*).toArray
 
 
@@ -74,15 +75,15 @@ class UCharTest extends AnyFunSuite {
   }
 
   test("toUtf8") {
-    assert(a.toUtf8 == byteSeq(0x61))
-    assert(full_width_space.toUtf8 == byteSeq(0xE3, 0x80, 0x80))
-    assert(rare_kanji.toUtf8 == byteSeq(0xf0, 0x90, 0x90, 0xb7))
+    assert(a.toUtf8 sameElements bytes(0x61))
+    assert(full_width_space.toUtf8 sameElements bytes(0xE3, 0x80, 0x80))
+    assert(rare_kanji.toUtf8 sameElements bytes(0xf0, 0x90, 0x90, 0xb7))
   }
 
   test("toUtf16") {
-    assert(a.toUtf16 == Seq(0x61))
-    assert(full_width_space.toUtf16 == Seq(0x3000))
-    assert(rare_kanji.toUtf16 == Seq(0xD801, 0xDC37))
+    assert(a.toUtf16 sameElements Array(0x61))
+    assert(full_width_space.toUtf16 sameElements Array(0x3000))
+    assert(rare_kanji.toUtf16 sameElements Array(0xD801, 0xDC37))
   }
 
   test("appendTo") {
@@ -104,6 +105,7 @@ class UCharTest extends AnyFunSuite {
 
   test("equals") {
     assert(!a.equals(capital_a))
+    //noinspection ComparingUnrelatedTypes
     assert(!a.equals(None))
     assert(a.equals(new UChar(0x61)))
     assert(full_width_space.equals(new UChar(0x3000)))
@@ -117,7 +119,7 @@ class UCharTest extends AnyFunSuite {
     writer.write(full_width_space.codePoint)
     writer.write(rare_kanji.codePoint)
 
-    val expected = Array.fill(10)(0).appendedAll(testUtf8)
+    val expected = Seq.fill(10)(0) ++ testUtf8
 
     assert(writer.getOffset == expected.length)
     assert(expected.indices.forall(i => buffer(i) == expected(i)))

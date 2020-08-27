@@ -2,6 +2,7 @@ package net.kfoundation
 
 import java.io.ByteArrayInputStream
 
+import net.kfoundation.encoding.DecodingException
 import org.scalatest.funsuite.AnyFunSuite
 
 class UStringTest extends AnyFunSuite {
@@ -24,27 +25,26 @@ class UStringTest extends AnyFunSuite {
 
   test("UString from native String") {
     val str = new String(Array[Int](0x61, 0x3000, 0x10437), 0, 3)
-    assert(UString.of(str).toUtf8 == testUtf8.toSeq)
+    assert(UString.of(str).toUtf8 sameElements testUtf8)
 
     // Implicit conversion
     val uStr: UString = str
-    assert(uStr.toUtf8 == testUtf8.toSeq)
+    assert(uStr.toUtf8 sameElements testUtf8)
   }
 
   test("UString from byte array") {
-    assert(UString.of(testUtf8).toUtf8 == testUtf8.toSeq)
+    assert(UString.of(testUtf8).toUtf8 sameElements testUtf8)
   }
 
   test("UString from sub array of bytes") {
     val b = bytes('a', 'b', 'c', 'd', 'e', 'f')
-    assert(UString.of(b, 2, 3).toUtf8 == byteSeq('c', 'd', 'e'))
+    assert(UString.of(b, 2, 3).toUtf8 sameElements bytes('c', 'd', 'e'))
   }
 
   test("UString from UTF-8 stream") {
     val s = new ByteArrayInputStream(testUtf8)
-    assert(UString.readUtf8(s, testUtf8.length).toUtf8 == testUtf8.toSeq)
+    assert(UString.readUtf8(s, testUtf8.length).toUtf8 sameElements testUtf8)
 
-    val bogous = new ByteArrayInputStream(testUtf8.dropRight(1))
     assertThrows[DecodingException](UString.readUtf8(s, testUtf8.length-1))
 
     s.reset()
@@ -54,7 +54,7 @@ class UStringTest extends AnyFunSuite {
   }
 
   test("toUtf8") {
-    assert(UString.of(testUtf8).toUtf8 == testUtf8.toSeq)
+    assert(UString.of(testUtf8).toUtf8 sameElements testUtf8)
   }
 
   test("octetsIterator") {

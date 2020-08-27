@@ -4,9 +4,11 @@ import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 import net.kfoundation.UChar._
+import net.kfoundation.encoding.{DecodingException, MurmurHash3}
 
 import scala.annotation.tailrec
 import scala.language.implicitConversions
+
 
 
 object UString {
@@ -70,6 +72,10 @@ object UString {
   }
 
   implicit def of(str: String): UString = new UString(str)
+
+  def of(ch: UChar): UString = new UString(ch.toUtf8)
+
+  def of(octets: Array[Byte]) = new UString(octets)
 
   def of(octets: Seq[Byte]) = new UString(octets.toArray)
 
@@ -170,7 +176,7 @@ class UString private (private val octets: Array[Byte]) {
     }
   }
 
-  def toUtf8: Seq[Byte] = wrap(octets)
+  def toUtf8: Array[Byte] = octets
 
   def octetsIterator: Iterator[Byte] = octets.iterator
 

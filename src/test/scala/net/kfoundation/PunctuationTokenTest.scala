@@ -1,6 +1,6 @@
 package net.kfoundation
 
-import net.kfoundation.lang.lex.{CodeWalker, PunctuationToken}
+import net.kfoundation.parse.lex.{CodeWalker, PunctuationToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class PunctuationTokenTest extends AnyFlatSpec {

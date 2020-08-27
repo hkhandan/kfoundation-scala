@@ -1,6 +1,6 @@
 package net.kfoundation
 
-import net.kfoundation.lang.lex.{CodeWalker, DecimalToken, IntegralToken, NumericToken}
+import net.kfoundation.parse.lex.{CodeWalker, DecimalToken, IntegralToken, NumericToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class NumericTokenTest extends AnyFlatSpec {

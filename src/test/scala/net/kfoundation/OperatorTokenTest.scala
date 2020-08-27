@@ -1,6 +1,6 @@
 package net.kfoundation
 
-import net.kfoundation.lang.lex.{CodeWalker, OperatorToken}
+import net.kfoundation.parse.lex.{CodeWalker, OperatorToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class OperatorTokenTest extends AnyFlatSpec {

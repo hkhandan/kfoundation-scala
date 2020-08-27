@@ -1,6 +1,6 @@
 package net.kfoundation
 
-import net.kfoundation.lang.lex.{CodeWalker, KeywordToken}
+import net.kfoundation.parse.lex.{CodeWalker, KeywordToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 
