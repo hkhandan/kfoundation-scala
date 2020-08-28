@@ -147,20 +147,25 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
     case class B(b1: Double)
     case class C(c1: A, c2: B)
 
-    implicit val A_RW: ValueReadWriter[A] =
+    implicit val aRW: ValueReadWriter[A] =
       readWriterOf[UString, Int, Boolean]("A", "a1", "a2", "a3").asReadWriterOf(
         v => A(v._1, v._2, v._3),
         a => (a.a1, a.a2, a.a3))
 
-    implicit val B_RW: ValueReadWriter[B] =
+    implicit val bRW: ValueReadWriter[B] =
       readWriterOf[Double]("B", "b1").asReadWriterOf(v => B(v), b => b.b1)
 
-    implicit val C_RW: ValueReadWriter[C] =
+    implicit val cRW: ValueReadWriter[C] =
       readWriterOf[A, B]("C", "c1", "c2").asReadWriterOf(
         v => C(v._1, v._2),
         c => (c.c1, c.c2))
 
     val input = "C[c1=A[a1=\"abc\" a2=123 a3=false] c2=B[b1=123.45]]"
-    C_RW.read(new K4ObjectDeserializer(input))
+    val expected = C(A("abc", 123, a3 = false), B(123.45))
+
+    val c = cRW.read(new K4ObjectDeserializer(input))
+
+    assert(c == expected)
   }
+
 }

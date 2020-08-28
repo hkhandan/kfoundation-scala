@@ -39,8 +39,6 @@ val generateReadWritersImpl = Def.task {
 
 // --- Project Settings --- //
 
-
-
 val latestScala = "2.13.3"
 val latestScalaForSbt = "2.12.10"
 
@@ -55,11 +53,10 @@ ThisBuild / scalaVersion := latestScalaForSbt
 ThisBuild / crossScalaVersions := List(latestScala, latestScalaForSbt)
 ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value
 
-Compile / sourceGenerators += generateReadWritersImpl
-
 lazy val root = project.in(file("."))
   .aggregate(kfoundation.js, kfoundation.jvm)
   .settings(
+    Compile / sourceGenerators += generateReadWritersImpl,
     publish := {},
     publishLocal := {},
     publishSigned := {},
@@ -69,9 +66,9 @@ lazy val kfoundation = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("."))
   .settings(
-    //name := (ThisBuild / name).value
-    Compile / unmanagedSourceDirectories += scalaGenDirectory.value
-  )
+    name := (ThisBuild / name).value,
+    Compile / sourceGenerators += generateReadWritersImpl,
+    Compile / unmanagedSourceDirectories += scalaGenDirectory.value)
 
 
 
