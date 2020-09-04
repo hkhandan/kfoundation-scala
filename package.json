@@ -1,6 +1,6 @@
 {
   "name": "kfoundation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "KFoundation JavaScript Library",
   "main": ".js/target/scala-2.13/kfoundation-scala-opt.js",
   "scripts": {

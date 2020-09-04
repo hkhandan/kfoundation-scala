@@ -58,7 +58,7 @@ extends LanguageLike {
 
   private def getRegionCode: Option[String] = region.map(_ match {
     case c: Country => c.isoAlpha2
-    case r: _ => r.unm49.toString
+    case r => r.unm49.toString
   })
 
   override def asLocale: Locale = getJavaRegionCode match {
