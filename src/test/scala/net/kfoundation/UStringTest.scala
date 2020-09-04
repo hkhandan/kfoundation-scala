@@ -2,7 +2,8 @@ package net.kfoundation
 
 import java.io.ByteArrayInputStream
 
-import net.kfoundation.encoding.DecodingException
+import net.kfoundation.scala.{UChar, UString}
+import net.kfoundation.scala.encoding.DecodingException
 import org.scalatest.funsuite.AnyFunSuite
 
 class UStringTest extends AnyFunSuite {
@@ -55,12 +56,6 @@ class UStringTest extends AnyFunSuite {
 
   test("toUtf8") {
     assert(UString.of(testUtf8).toUtf8 sameElements testUtf8)
-  }
-
-  test("octetsIterator") {
-    val it = UString.of(testUtf8).octetsIterator
-    assert(testUtf8.forall(b => b == it.next()))
-    assert(!it.hasNext)
   }
 
   test("uCharIterator") {

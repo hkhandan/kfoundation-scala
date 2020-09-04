@@ -1,7 +1,8 @@
 package net.kfoundation
 
-import net.kfoundation.parse.CodeRange
-import net.kfoundation.parse.lex.{CodeWalker, IdentifierToken}
+import net.kfoundation.scala.UString
+import net.kfoundation.scala.parse.CodeRange
+import net.kfoundation.scala.parse.lex.{CodeWalker, IdentifierToken}
 
 
 class IdentifierTokenTest extends org.scalatest.flatspec.AnyFlatSpec {

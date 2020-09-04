@@ -1,5 +1,7 @@
 import java.io.{File, FileWriter}
 
+import sbt.Keys.streams
+import sbt.ThisBuild
 import sbt.io.RichFile
 import sbt.io.IO
 
@@ -234,8 +236,8 @@ object ReadWriterGenerator {
     val outputFile = dir / s"$className.scala"
     IO.createDirectory(dir)
     val writer = new FileWriter(outputFile)
-    writer.write("package net.kfoundation.serialization\n")
-    writer.write("import net.kfoundation.UString\n")
+    writer.write("package net.kfoundation.scala.serialization\n")
+    writer.write("import net.kfoundation.scala.UString\n")
     writer.write(s"object $className {\n")
     writer.write(staticCode)
     writer.write("\n")
@@ -243,6 +245,7 @@ object ReadWriterGenerator {
     2.to(N).foreach(i => writer.write(factoryGen(i)))
     writer.write("}")
     writer.close()
+    println("Generated: " + outputFile)
     outputFile
   }
 

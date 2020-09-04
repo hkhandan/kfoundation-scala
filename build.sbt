@@ -41,6 +41,7 @@ val generateReadWritersImpl = Def.task {
 
 val latestScala = "2.13.3"
 val latestScalaForSbt = "2.12.10"
+val scalaVersions = List(latestScala, latestScalaForSbt)
 
 resolvers ++= Seq(
   Resolver.mavenLocal,
@@ -49,26 +50,30 @@ resolvers ++= Seq(
 ThisBuild / libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test"
 ThisBuild / libraryDependencies += "org.scala-lang.modules" %%% "scala-xml" % "2.0.0-M1"
 
-ThisBuild / scalaVersion := latestScalaForSbt
-ThisBuild / crossScalaVersions := List(latestScala, latestScalaForSbt)
+ThisBuild / scalaVersion := latestScala
 ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value
 
-lazy val root = project.in(file("."))
-  .aggregate(kfoundation.js, kfoundation.jvm)
+val scalaApi = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("."))
+  .settings(
+    name := (ThisBuild / name).value,
+    Compile / unmanagedSourceDirectories += scalaGenDirectory.value)
+  .jsSettings(
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) })
+
+val kfoundation = project.in(file("."))
+  .aggregate(scalaApi.js, scalaApi.jvm)
   .settings(
     Compile / sourceGenerators += generateReadWritersImpl,
+    crossScalaVersions := scalaVersions,
     publish := {},
     publishLocal := {},
     publishSigned := {},
     publishM2 := {})
 
-lazy val kfoundation = crossProject(JVMPlatform, JSPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("."))
-  .settings(
-    name := (ThisBuild / name).value,
-    Compile / sourceGenerators += generateReadWritersImpl,
-    Compile / unmanagedSourceDirectories += scalaGenDirectory.value)
+val javaApi = project.in(file("java-api"))
+  .dependsOn(kfoundation)
 
 
 

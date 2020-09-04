@@ -1,10 +1,11 @@
 package net.kfoundation
 
-import net.kfoundation.parse.lex.{CodeWalker, DecimalToken, IntegralToken, NumericToken}
+import net.kfoundation.scala.UString
+import net.kfoundation.scala.parse.lex.{CodeWalker, DecimalToken, IntegralToken, NumericToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class NumericTokenTest extends AnyFlatSpec {
-  import net.kfoundation.UString._
+  import UString._
 
   private def parse(s: UString): Option[NumericToken[_]] =
     NumericToken.reader.tryRead(CodeWalker.of(s))

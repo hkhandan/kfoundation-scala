@@ -1,0 +1,24 @@
+{
+  "name": "kfoundation",
+  "version": "0.1.0",
+  "description": "KFoundation JavaScript Library",
+  "main": ".js/target/scala-2.13/kfoundation-scala-opt.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hkhandan/kfoundation-scala.git"
+  },
+  "keywords": [
+    "serialization",
+    "deserialization",
+    "internationalization"
+  ],
+  "author": "Hamed \"K\" Khandan <hamed.khandan@mscp.co>",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "bugs": {
+    "url": "https://github.com/hkhandan/kfoundation-scala/issues"
+  },
+  "homepage": "https://github.com/hkhandan/kfoundation-scala#readme"
+}

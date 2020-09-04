@@ -1,6 +1,7 @@
 package net.kfoundation
 
-import net.kfoundation.parse.lex.{CodeWalker, LexicalError, StringToken}
+import net.kfoundation.scala.UString
+import net.kfoundation.scala.parse.lex.{CodeWalker, LexicalError, StringToken}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class StringTokenTest extends AnyFlatSpec {

@@ -2,7 +2,8 @@ package net.kfoundation
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
-import net.kfoundation.UChar.{ArrayUtf8Writer, ByteArrayUtf8Reader, SingleUtf8Writer, StreamUtf8Reader, StreamUtf8Writer}
+import net.kfoundation.scala.UChar.{ArrayUtf8Writer, ByteArrayUtf8Reader, SingleUtf8Writer, StreamUtf8Reader, StreamUtf8Writer}
+import net.kfoundation.scala.UChar
 import org.scalatest.funsuite.AnyFunSuite
 
 
