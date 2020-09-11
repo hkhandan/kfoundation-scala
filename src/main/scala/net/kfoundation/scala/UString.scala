@@ -4,6 +4,7 @@ import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 import net.kfoundation.scala.UChar._
+import net.kfoundation.scala.UString.{CR, PIPE}
 import net.kfoundation.scala.encoding.{DecodingException, MurmurHash3}
 
 import scala.annotation.tailrec
@@ -46,9 +47,9 @@ object UString {
   }
 
   private val NULL = new UString("null")
+  private val PIPE: Byte = '|'
+  private val CR: Byte = '\n'
   val EMPTY: UString = new UString(Array.empty[Byte])
-
-  private def wrap[T](a: Array[T]): Seq[T] = a
 
   private def validateUtf8(bytes: Array[Byte]): Boolean = {
     val n = bytes.length
@@ -85,6 +86,10 @@ object UString {
     new UString(selection)
   }
 
+  def of(n: Long): UString = of(n.toString)
+
+  def of(n: Double): UString = of(n.toString)
+
   def join(seq: Seq[UString], delimiter: UString): UString = {
     val size = seq.foldLeft(0)((a, b) => a + b.getUtf8Length) +
       delimiter.getUtf8Length*Math.max(seq.length-1, 0)
@@ -102,15 +107,13 @@ object UString {
 
 
 class UString private (private val octets: Array[Byte]) {
-  import UString._
-
   private var length: Integer = null
 
   def this(nativeString: String) = this(
     nativeString.getBytes(StandardCharsets.UTF_8))
 
   private def codePointIterator: Iterator[Int] =
-    new CodePointIterator(octets)
+    new UString.CodePointIterator(octets)
 
   @tailrec
   private def getCharCount(n: Int, offset: Int, size: Int): Int =
@@ -178,7 +181,7 @@ class UString private (private val octets: Array[Byte]) {
 
   def toUtf8: Array[Byte] = octets
 
-  def uCharIterator: Iterator[UChar] = new UCharIterator(octets)
+  def uCharIterator: Iterator[UChar] = new UString.UCharIterator(octets)
 
   def getLength: Int = {
     if(length == null) {
@@ -190,6 +193,8 @@ class UString private (private val octets: Array[Byte]) {
   def getUtf8Length: Int = octets.length
 
   def isEmpty: Boolean = octets.isEmpty
+
+  def getOctetAt(i: Int): Byte = octets(i)
 
   def equalsIgnoreCase(that: UString): Boolean = equalsIgnoreCase(
     new ByteArrayUtf8Reader(this.octets),
@@ -207,7 +212,7 @@ class UString private (private val octets: Array[Byte]) {
 
   def find(char: UChar, offset: Int): Int = find(char.toUtf8, offset)
 
-  def find(str: UString, offset: Int): Int = find(wrap(str.octets), offset)
+  def find(str: UString, offset: Int): Int = find(str.octets, offset)
 
   def mapCodePoints(fn: Int => Int): UString = new UString(
     codePointIterator.map(fn)
@@ -251,12 +256,34 @@ class UString private (private val octets: Array[Byte]) {
 
   def append(ch: UChar): UString = append(ch.toUtf8)
 
-  def printToStream(os: OutputStream): Unit = os.write(octets)
+  def writeToStream(os: OutputStream): Unit = os.write(octets)
 
   def +(v: UString): UString = append(v)
 
   def +(o: Any): UString = append(
-    if(o == null) NULL else new UString(o.toString))
+    if(o == null) UString.NULL else new UString(o.toString))
+
+  def toLong: Long =  toString.toLong
+
+  def toDouble: Double = toString.toDouble
+
+  def stripMargin: UString = {
+    val buffer = new ByteArrayOutputStream()
+    var ignore = false
+    octets.foreach(o => {
+      if(o == PIPE) {
+        ignore = false
+      } else {
+        if(!ignore) {
+          buffer.write(o)
+        }
+        if(o == CR) {
+          ignore = true
+        }
+      }
+    })
+    new UString(buffer.toByteArray)
+  }
 
   override def toString: String = new String(octets, StandardCharsets.UTF_8)
 

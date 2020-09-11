@@ -22,13 +22,20 @@ object CodeWalker {
       path.toString,
       path.getInputStream)
 
-  def of(str: UString) = new CodeWalker("buffer",
+  def of(str: UString) = new CodeWalker("<buffer>",
     new ByteArrayInputStream(str.toUtf8))
+
+  def of(input: InputStream) = new CodeWalker("<stream>", input)
+
+  def of(path: Path) = new CodeWalker(
+    path.getFileName
+      .getOrElse("<file>"),
+    path.getInputStream)
 }
 
 
-class CodeWalker(inputName: String, input: InputStream)
-{
+
+class CodeWalker(inputName: String, input: InputStream) {
   import CodeWalker._
 
   private val reader = new UChar.StreamUtf8Reader(input)
@@ -196,6 +203,33 @@ class CodeWalker(inputName: String, input: InputStream)
     while(tryRead(test) >= 0) {
       n += 1
     }
+    n
+  }
+
+
+  def skip(test: Int => Boolean): Boolean = {
+    reader.mark(8)
+    val ch = reader.nextCodePoint
+    if(test(ch)) {
+      if(ch == CR) {
+        end.newLine
+      } else {
+        end.step(1)
+      }
+      true
+    } else {
+      reader.reset()
+      false
+    }
+  }
+
+
+  def skipAll(test: Int => Boolean): Int = {
+    var n = 0
+    while(skip(test)) {
+      n += 1
+    }
+    commit()
     n
   }
 

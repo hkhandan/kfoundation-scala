@@ -6,6 +6,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 
+
 object ValueReadWriter {
   // TODO move these to generated code
   class FlexObjectWriter(
@@ -22,6 +23,7 @@ object ValueReadWriter {
     }
   }
 
+
   class FlexObjectReader(
     typeName: UString,
     properties: Map[UString, ValueReadWriter[Any]])
@@ -34,7 +36,7 @@ object ValueReadWriter {
       def loop(): Unit = {
         val pToken = deserializer.tryReadPropertyName()
         if(pToken.isDefined) {
-          val pName = pToken.get.value
+          val pName = pToken.get
           val reader = properties.getOrElse(pName, throw new DeserializationError(
             "Reader for property is not provided: " + typeName + "." + pName))
           result.put(pName, reader.read(deserializer))
@@ -49,6 +51,7 @@ object ValueReadWriter {
       result.toMap
     }
   }
+
 
   class FlexObjectReaderWriter(
     typeName: UString,

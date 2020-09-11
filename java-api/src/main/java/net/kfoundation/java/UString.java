@@ -133,7 +133,7 @@ public class UString {
     }
 
     public void printToStream(OutputStream os) {
-        impl.printToStream(os);
+        impl.writeToStream(os);
     }
 
     public net.kfoundation.scala.UString $plus(net.kfoundation.scala.UString v) {

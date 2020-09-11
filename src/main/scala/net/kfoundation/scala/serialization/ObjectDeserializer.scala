@@ -1,52 +1,40 @@
 package net.kfoundation.scala.serialization
 
 import net.kfoundation.scala.UString
+import net.kfoundation.scala.parse.CodeLocation
 import net.kfoundation.scala.parse.lex._
-import net.kfoundation.scala.parse.{CodeLocation, CodeRange}
 
 import scala.annotation.tailrec
 
 
-object ObjectDeserializer {
-  class ObjectBeginToken(range: CodeRange, cls: Option[UString])
-    extends Token[Option[UString]](range, cls)
 
-  class ObjectEndToken(range: CodeRange, cls: Option[UString])
-    extends Token[Option[UString]](range, cls)
+abstract class ObjectDeserializer {
 
-  class CollectionBeginToken(range: CodeRange) extends Token[Unit](range, ())
-  class CollectionEndToken(range: CodeRange) extends Token[Unit](range, ())
-  class PropertyNameToken(range: CodeRange, name: UString)
-    extends IdentifierToken(range, name)
-}
-
-
-trait ObjectDeserializer {
-  import ObjectDeserializer._
-
-  // Literals are: String, Int, Boolean, Real
-  // Literals are attributes
-  // Enum is object with mandatory "name" property. Optionally, other properties can be serialized.
-  // Object with name can be deserialized as enum, other properties will be ignored.
-  // Array, Seq, List, etc. are collection
-  // XML tag name for collection is "Collection" by default, can be overridden
-  // Map is object with mandatory property "elements" collection of KV objects.
-  //   Literal keys are attribute in XML and literal in JSON
-  // Null in XML has mandatory empty attribute "xsi:nil"
-
-  def readObjectBegin(): ObjectBeginToken
-  def readObjectEnd(): ObjectEndToken
-  def readCollectionBegin(): CollectionBeginToken
-  def tryReadCollectionEnd(): Option[CollectionEndToken]
-  def readStringLiteral(): StringToken
-  def readIntegerLiteral(): IntegralToken
-  def readDecimalLiteral(): DecimalToken
-  def readBooleanLiteral(): BooleanToken
-  def tryReadPropertyName(): Option[PropertyNameToken]
+  def readObjectBegin(): Option[UString]
+  def readObjectEnd(): Option[UString]
+  def readCollectionBegin(): Unit
+  def tryReadCollectionEnd(): Boolean
+  def tryReadPropertyName(): Option[UString]
+  def readStringLiteral(): UString
+  def readIntegerLiteral(): Long
+  def readDecimalLiteral(): Double
+  def readBooleanLiteral(): Boolean
   protected def getCurrentLocation: CodeLocation
 
 
-  def readObjectBegin(expectedName: UString): Unit = readObjectBegin().value
+  def readLiteralOrString[T](cls: Class[T]): Either[T, UString] =
+    Right(readStringLiteral())
+
+
+  def readLiteralOrInteger[T](cls: Class[T]): Either[T, Long] =
+    Right(readIntegerLiteral())
+
+
+  def readLiteralOrDecimal[T](cls: Class[T]): Either[T, Double] =
+    Right(readDecimalLiteral())
+
+
+  def readObjectBegin(expectedName: UString): Unit = readObjectBegin()
     .foreach(name => if(!name.equals(expectedName))
       throw new DeserializationError(
         s"At $getCurrentLocation object of type $expectedName was expected but found: $name"))
@@ -56,7 +44,6 @@ trait ObjectDeserializer {
     .getOrElse(throw new LexicalError(
       getCurrentLocation,
       "Missing expected property name"))
-    .value
 
 
   def readObject(typeName: UString, fn: UString => Unit): Unit = {
@@ -66,7 +53,7 @@ trait ObjectDeserializer {
     def readNextProps(): Unit = {
       val maybeProp = tryReadPropertyName()
       if(maybeProp.isDefined) {
-        fn(maybeProp.get.value)
+        fn(maybeProp.get)
         readNextProps()
       }
     }
@@ -75,29 +62,4 @@ trait ObjectDeserializer {
     readObjectEnd()
   }
 
-
-//  def readObject(typeName: UString, fields: Map[UString, ValueReader[_]]):
-//  Map[UString, Any] = {
-//    readObjectBegin(typeName)
-//
-//    val values = new mutable.HashMap[UString, Any]()
-//
-//    @tailrec
-//    def readNextProps(): Unit = {
-//      val maybeProp = tryReadPropertyName()
-//      if(maybeProp.isDefined) {
-//        val fieldName = maybeProp.get.value
-//
-//        fields.get(fieldName)
-//          .map(reader => {values.put(fieldName, reader.read(this)); ()})
-//          .orElse(throw new DeserializationError(
-//            s"$getLocationTag no reader provided for field $fieldName of type $typeName"))
-//
-//        readNextProps()
-//      }
-//    }
-//
-//    readNextProps()
-//    values.toMap
-//  }
 }

@@ -43,6 +43,8 @@ val latestScala = "2.13.3"
 val latestScalaForSbt = "2.12.10"
 val scalaVersions = List(latestScala, latestScalaForSbt)
 
+scalacOptions += "-deprecation"
+
 resolvers ++= Seq(
   Resolver.mavenLocal,
   Resolver.mavenCentral)

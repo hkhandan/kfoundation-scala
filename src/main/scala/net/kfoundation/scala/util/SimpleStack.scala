@@ -16,4 +16,6 @@ class SimpleStack[T] {
 
   def peek(): Option[T] = items.lastOption
 
+  def getItems: List[Any] = List.from(items)
+
 }

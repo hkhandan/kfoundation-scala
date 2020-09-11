@@ -287,7 +287,7 @@ class UChar private (val codePoint: Int, private val utf8: Array[Byte]) {
   def getUtf8Length: Int = utf8.length
   def toUtf8: Array[Byte] = utf8
   def toUtf16: Array[Char] = encodeUtf16(codePoint)
-  def printToStream(os: OutputStream): Unit = os.write(utf8)
+  def writeToStream(os: OutputStream): Unit = os.write(utf8)
   def appendTo(builder: StringBuilder): Unit = builder.appendAll(toUtf16)
 
   override def hashCode(): Int = MurmurHash3.hash32x86(utf8)

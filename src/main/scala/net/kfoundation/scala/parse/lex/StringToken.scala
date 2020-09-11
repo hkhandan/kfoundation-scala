@@ -36,7 +36,7 @@ object StringToken {
       } else if(ch.equals(DOUBLE_QUOTE)) {
         UString.of(b.toByteArray.toSeq)
       } else {
-        ch.printToStream(b)
+        ch.writeToStream(b)
         readStringBody(w, b, escaped = false)
       }
 

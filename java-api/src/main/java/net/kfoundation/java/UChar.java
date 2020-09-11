@@ -117,7 +117,7 @@ public class UChar {
     }
 
     public void printToStream(OutputStream os) {
-        impl.printToStream(os);
+        impl.writeToStream(os);
     }
 
     public void appendTo(StringBuilder builder) {

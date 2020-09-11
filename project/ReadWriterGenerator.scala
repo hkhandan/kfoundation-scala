@@ -1,7 +1,5 @@
 import java.io.{File, FileWriter}
 
-import sbt.Keys.streams
-import sbt.ThisBuild
 import sbt.io.RichFile
 import sbt.io.IO
 
@@ -44,42 +42,42 @@ object ReadWriterGenerator {
     |  override def write(serializer: ObjectSerializer, value: Int): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): Int =
-    |    deserializer.readIntegerLiteral().intValue
+    |    deserializer.readIntegerLiteral().toInt
     |}
     |
     |implicit val LONG: ValueReadWriter[Long] = new ValueReadWriter[Long] {
     |  override def write(serializer: ObjectSerializer, value: Long): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): Long =
-    |    deserializer.readIntegerLiteral().value
+    |    deserializer.readIntegerLiteral()
     |}
     |
     |implicit val STRING: ValueReadWriter[UString] = new ValueReadWriter[UString] {
     |  override def write(serializer: ObjectSerializer, value: UString): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): UString =
-    |    deserializer.readStringLiteral().value
+    |    deserializer.readStringLiteral()
     |}
     |
     |implicit val FLOAT: ValueReadWriter[Float] = new ValueReadWriter[Float] {
     |  override def write(serializer: ObjectSerializer, value: Float): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): Float =
-    |    deserializer.readDecimalLiteral().floatValue
+    |    deserializer.readDecimalLiteral().toFloat
     |}
     |
     |implicit val DOUBLE: ValueReadWriter[Double] = new ValueReadWriter[Double] {
     |  override def write(serializer: ObjectSerializer, value: Double): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): Double =
-    |    deserializer.readDecimalLiteral().value
+    |    deserializer.readDecimalLiteral()
     |}
     |
     |implicit val BOOLEAN: ValueReadWriter[Boolean] = new ValueReadWriter[Boolean] {
     |  override def write(serializer: ObjectSerializer, value: Boolean): Unit =
     |    serializer.writeLiteral(value)
     |  override def read(deserializer: ObjectDeserializer): Boolean =
-    |    deserializer.readBooleanLiteral().value
+    |    deserializer.readBooleanLiteral()
     |}
     |
     |def readWriterOf[T](implicit rw: ValueReadWriter[T]): ValueReadWriter[T] = rw

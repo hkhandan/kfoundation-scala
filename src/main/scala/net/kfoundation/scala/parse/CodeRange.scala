@@ -1,5 +1,11 @@
 package net.kfoundation.scala.parse
 
+object CodeRange {
+  def of(location: CodeLocation): CodeRange = {
+    new CodeRange(location.getFileName, location, location)
+  }
+}
+
 class CodeRange(
   val file: String,
   val begin: CodeLocation,

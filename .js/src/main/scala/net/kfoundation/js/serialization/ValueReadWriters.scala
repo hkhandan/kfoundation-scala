@@ -57,7 +57,7 @@ object ValueReadWriters {
       var list = Seq[js.Object]()
 
       @tailrec
-      def readNext(): Unit = if(deserializer.tryReadCollectionEnd().isEmpty) {
+      def readNext(): Unit = if(deserializer.tryReadCollectionEnd()) {
         list = list :+ rw.getImplementation.read(deserializer).asInstanceOf
         readNext()
       }
@@ -71,7 +71,7 @@ object ValueReadWriters {
 
   private val STRING_IMPL = new s.ValueReadWriter[String] {
     override def read(deserializer: s.ObjectDeserializer): String =
-      deserializer.readStringLiteral().value.toString
+      deserializer.readStringLiteral().toString
 
     override def write(serializer: s.ObjectSerializer, value: String): Unit =
       serializer.writeLiteral(UString.of(value))

@@ -17,4 +17,6 @@ class CodeLocation(fileName: String, row: Int, col: Int, streamPos: Int)
 
   override def step(cols: Int, bytes: Int): MutableCodeLocation =
     new CodeLocation(fileName, row, col + cols, streamPos + bytes)
+
+  def to(end: CodeLocation) = new CodeRange(fileName, this, end)
 }

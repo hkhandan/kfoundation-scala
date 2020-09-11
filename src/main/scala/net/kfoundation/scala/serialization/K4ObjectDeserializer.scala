@@ -1,5 +1,7 @@
 package net.kfoundation.scala.serialization
 
+import java.io.InputStream
+
 import net.kfoundation.scala.io.Path
 import net.kfoundation.scala.parse.CodeLocation
 import net.kfoundation.scala.parse.lex._
@@ -11,19 +13,18 @@ import net.kfoundation.scala.{UChar, UString}
 
 
 object K4ObjectDeserializer {
-  private object State extends Enumeration {
-    val STREAM_BEGIN, STREAM_END, OBJECT_BEGIN, OBJECT_END, COLLECTION_BEGIN,
-      COLLECTION_END, PROPERTY, LITERAL = Value
-  }
+  private val COLLECTION_STACK_SYMBOL: UString = "*"
 
-  private val OPEN_BRACE: UChar = '['
-  private val CLOSE_BRACE: UChar = ']'
-  private val OPEN_CURLY_BRACE: UChar = '{'
-  private val CLOSE_CURLY_BRACE: UChar = '}'
-  private val EQUAL: UChar = '='
-  private val TRUE: UString = "true"
-  private val FALSE: UString = "false"
-  private val COLLECTION_STACK_SYMBOL: UString = "{}"
+  val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
+    override def of(str: UString): ObjectDeserializer =
+      new K4ObjectDeserializer(CodeWalker.of(str))
+
+    override def of(input: InputStream): ObjectDeserializer =
+      new K4ObjectDeserializer(CodeWalker.of(input))
+
+    override def of(path: Path): ObjectDeserializer
+    = new K4ObjectDeserializer(CodeWalker.of(path))
+  }
 }
 
 
@@ -31,18 +32,11 @@ object K4ObjectDeserializer {
 class K4ObjectDeserializer private (walker: CodeWalker)
   extends ObjectDeserializer
 {
-  import ObjectDeserializer._
+  import internals.ObjectStreamStateMachine.State
+  import internals.CommonSymbols._
 
   private val stack = new SimpleStack[UString]
   private var state = State.STREAM_BEGIN
-
-
-  def this(path: Path) = this(new CodeWalker(
-    path.getFileName.getOrElse("<bad-path-name>"),
-    path.getInputStream))
-
-
-  def this(s: UString) = this(CodeWalker.of(s))
 
 
   private def readOrError(symbol: UChar): Unit = {
@@ -75,7 +69,7 @@ class K4ObjectDeserializer private (walker: CodeWalker)
   }
 
 
-  override def readObjectBegin(): ObjectBeginToken = {
+  override def readObjectBegin(): Option[UString] = {
     validateTransition(State.OBJECT_BEGIN)
     walker.skipSpaces()
 
@@ -87,11 +81,11 @@ class K4ObjectDeserializer private (walker: CodeWalker)
     walker.readSpaces()
     readOrError(OPEN_BRACE)
     stack.push(token.value)
-    new ObjectBeginToken(token, Some(token.value))
+    Some(token.value)
   }
 
 
-  override def readObjectEnd(): ObjectEndToken = {
+  override def readObjectEnd(): Option[UString] = {
     validateTransition(State.OBJECT_END)
     walker.skipSpaces()
     readOrError(CLOSE_BRACE)
@@ -103,23 +97,24 @@ class K4ObjectDeserializer private (walker: CodeWalker)
         + " does not correspond to the beginning of any object.")
     }
 
-    new ObjectEndToken(walker.commit(), name)
+    walker.commit()
+    name
   }
 
 
-  override def readCollectionBegin(): CollectionBeginToken = {
+  override def readCollectionBegin(): Unit = {
     validateTransition(State.COLLECTION_BEGIN)
     walker.skipSpaces()
     readOrError(OPEN_CURLY_BRACE)
     stack.push(COLLECTION_STACK_SYMBOL)
-    new CollectionBeginToken(walker.commit())
+    walker.commit()
   }
 
 
-  override def tryReadCollectionEnd(): Option[CollectionEndToken] = {
+  override def tryReadCollectionEnd(): Boolean = {
     walker.skipSpaces()
     if(!walker.tryRead(CLOSE_CURLY_BRACE)) {
-      None
+      false
     } else {
       validateTransition(State.COLLECTION_END)
 
@@ -130,37 +125,38 @@ class K4ObjectDeserializer private (walker: CodeWalker)
           + walker.getCurrentLocation
           + " does not correspond to any object.")
       }
-      Some(new CollectionEndToken(walker.commit()))
+      true
     }
   }
 
 
-  override def tryReadPropertyName(): Option[PropertyNameToken] = {
+  override def tryReadPropertyName(): Option[UString] = {
     walker.skipSpaces()
 
     IdentifierToken.reader.tryRead(walker).map(id => {
       walker.readSpaces()
       readOrError(EQUAL)
       validateTransition(State.PROPERTY)
-      new PropertyNameToken(id, id.value)
+      id.value
     })
   }
 
 
-  override def readStringLiteral(): StringToken = {
+  override def readStringLiteral(): UString = {
     validateTransition(State.LITERAL)
     walker.skipSpaces()
     StringToken.reader
       .tryRead(walker)
       .getOrElse(throw walker.lexicalErrorAtBeginning("Missing string literal"))
+      .value
   }
 
 
-  override def readIntegerLiteral(): IntegralToken = {
+  override def readIntegerLiteral(): Long = {
     validateTransition(State.LITERAL)
     walker.skipSpaces()
     NumericToken.reader.tryRead(walker) match {
-      case Some(i: IntegralToken) => i
+      case Some(i: IntegralToken) => i.value
       case Some(d: DecimalToken) => throw walker.lexicalErrorAtBeginning(
         "Expected an integer, found: " + d.value)
       case _ => throw walker.lexicalErrorAtBeginning("Missing expected integer")
@@ -168,28 +164,29 @@ class K4ObjectDeserializer private (walker: CodeWalker)
   }
 
 
-  override def readDecimalLiteral(): DecimalToken = {
+  override def readDecimalLiteral(): Double = {
     validateTransition(State.LITERAL)
     walker.skipSpaces()
     NumericToken.reader.tryRead(walker) match {
-      case Some(i: IntegralToken) => i.asDecimalToken
-      case Some(d: DecimalToken) => d
+      case Some(i: IntegralToken) => i.asDecimalToken.value
+      case Some(d: DecimalToken) => d.value
       case _ => throw walker.lexicalErrorAtBeginning("Missing expected number")
     }
   }
 
 
-  override def readBooleanLiteral(): BooleanToken = {
+  override def readBooleanLiteral(): Boolean = {
     validateTransition(State.LITERAL)
     walker.skipSpaces()
     if(walker.tryRead(TRUE)) {
-      new BooleanToken(walker.commit(), true)
+      true
     } else if(walker.tryRead(FALSE)) {
-      new BooleanToken(walker.commit(), false)
+      false
     } else {
       throw walker.lexicalErrorAtBeginning("Missing expected boolean value")
     }
   }
+
 
   override def getCurrentLocation: CodeLocation = walker.getCurrentLocation
 }

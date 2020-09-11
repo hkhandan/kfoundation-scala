@@ -7,41 +7,42 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 
 
-class K4ObjectSerializerTest extends AnyFlatSpec {
+class K4ObjectDeserializerTest extends AnyFlatSpec {
+  import K4ObjectDeserializer.FACTORY
 
   "Empty object" should "be deserialized" in {
     val input = U"TestObject[]"
     val expected = U"TestObject"
-    val deserializer = new K4ObjectDeserializer(input)
+    val deserializer = FACTORY.of(input)
 
     val beginToken = deserializer.readObjectBegin()
-    assert(beginToken.value.contains(expected))
+    assert(beginToken.contains(expected))
 
     val endToken = deserializer.readObjectEnd()
-    assert(endToken.value.contains(expected))
+    assert(endToken.contains(expected))
   }
 
   "String property" should "be deserialized" in {
     val input: UString = "Object[field1=\"property value\"]"
     val expectedName = U"field1"
     val expectedValue = U"property value"
-    val deserializer = new K4ObjectDeserializer(input)
+    val deserializer = FACTORY.of(input)
     deserializer.readObjectBegin()
 
     val id = deserializer.readPropertyName()
     assert(id.equals(expectedName))
 
     val value = deserializer.readStringLiteral()
-    assert(value.value.equals(expectedValue))
+    assert(value.equals(expectedValue))
   }
 
   "Invalid string literal" should "result in error" in {
-    val deserializer1 = new K4ObjectDeserializer("Object[field1=\"abc]")
+    val deserializer1 = FACTORY.of("Object[field1=\"abc]")
     deserializer1.readObjectBegin()
     deserializer1.readPropertyName()
     assertThrows[LexicalError](deserializer1.readStringLiteral())
 
-    val deserializer2 = new K4ObjectDeserializer("Object[field1=1234]")
+    val deserializer2 = FACTORY.of("Object[field1=1234]")
     deserializer2.readObjectBegin()
     deserializer2.readPropertyName()
     assertThrows[LexicalError](deserializer2.readStringLiteral())
@@ -50,14 +51,14 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
   "Int property" should "be deserialized" in {
     val input = "Object[field1 = 1234567]"
     val expectedValue = 1234567
-    val deserializer = new K4ObjectDeserializer(input)
+    val deserializer = FACTORY.of(input)
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
-    assert(deserializer.readIntegerLiteral().value == expectedValue)
+    assert(deserializer.readIntegerLiteral() == expectedValue)
   }
 
   "Invalid integer value" should "result in error" in {
-    val deserializer = new K4ObjectDeserializer("Object[field1=123.45]")
+    val deserializer = FACTORY.of("Object[field1=123.45]")
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
     assertThrows[LexicalError](deserializer.readIntegerLiteral())
@@ -66,14 +67,14 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
   "Decimal property" should "be deserialized" in {
     val input = "Object[field1 = 123.4567]"
     val expectedValue: Double = 123.4567
-    val deserializer = new K4ObjectDeserializer(input)
+    val deserializer = FACTORY.of(input)
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
-    assert(deserializer.readDecimalLiteral().value == expectedValue)
+    assert(deserializer.readDecimalLiteral() == expectedValue)
   }
 
   "Invalid numeric value" should "result in error" in {
-    val deserializer = new K4ObjectDeserializer("Object[field1=abc]")
+    val deserializer = FACTORY.of("Object[field1=abc]")
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
     assertThrows[LexicalError](deserializer.readDecimalLiteral())
@@ -81,18 +82,18 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
 
   "Boolean property" should "be deserialized" in {
     val input = "Object[field1=true field2=false]"
-    val deserializer = new K4ObjectDeserializer(input)
+    val deserializer = FACTORY.of(input)
     deserializer.readObjectBegin()
 
     deserializer.readPropertyName()
-    assert(deserializer.readBooleanLiteral().value == true)
+    assert(deserializer.readBooleanLiteral())
 
     deserializer.readPropertyName()
-    assert(deserializer.readBooleanLiteral().value == false)
+    assert(!deserializer.readBooleanLiteral())
   }
 
   "Invalid boolean value" should "result in error" in {
-    val deserializer = new K4ObjectDeserializer("Object[field1=abc]")
+    val deserializer = FACTORY.of("Object[field1=abc]")
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
     assertThrows[LexicalError](deserializer.readBooleanLiteral())
@@ -101,32 +102,32 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
   "Object with multiple literal properties" should "be deserialized" in {
     val input = "TestObject[property1=true property2=\"abc\" property3=123.345]"
     val typeName = U"TestObject"
-    val deserializer = new K4ObjectDeserializer(input)
-    assert(deserializer.readObjectBegin().value.contains(typeName))
+    val deserializer = FACTORY.of(input)
+    assert(deserializer.readObjectBegin().contains(typeName))
     assert(deserializer.readPropertyName() == U"property1")
-    assert(deserializer.readBooleanLiteral().value)
+    assert(deserializer.readBooleanLiteral())
     assert(deserializer.readPropertyName() == U"property2")
-    assert(deserializer.readStringLiteral().value == U"abc")
+    assert(deserializer.readStringLiteral() == U"abc")
     assert(deserializer.readPropertyName() == U"property3")
-    assert(deserializer.readDecimalLiteral().value == 123.345)
-    assert(deserializer.readObjectEnd().value.contains(typeName))
+    assert(deserializer.readDecimalLiteral() == 123.345)
+    assert(deserializer.readObjectEnd().contains(typeName))
   }
 
   "Nested objects" should "be deserialized" in {
     val input = "OuterObject[property=InnerObject[property=InnerInnerObject[]]]"
-    val deserializer = new K4ObjectDeserializer(input)
-    assert(deserializer.readObjectBegin().value.contains(U"OuterObject"))
+    val deserializer = FACTORY.of(input)
+    assert(deserializer.readObjectBegin().contains(U"OuterObject"))
     assert(deserializer.readPropertyName() == U"property")
-    assert(deserializer.readObjectBegin().value.contains(U"InnerObject"))
+    assert(deserializer.readObjectBegin().contains(U"InnerObject"))
     assert(deserializer.readPropertyName() == U"property")
-    assert(deserializer.readObjectBegin().value.contains(U"InnerInnerObject"))
-    assert(deserializer.readObjectEnd().value.contains(U"InnerInnerObject"))
-    assert(deserializer.readObjectEnd().value.contains(U"InnerObject"))
-    assert(deserializer.readObjectEnd().value.contains(U"OuterObject"))
+    assert(deserializer.readObjectBegin().contains(U"InnerInnerObject"))
+    assert(deserializer.readObjectEnd().contains(U"InnerInnerObject"))
+    assert(deserializer.readObjectEnd().contains(U"InnerObject"))
+    assert(deserializer.readObjectEnd().contains(U"OuterObject"))
   }
 
   "Empty collection" should "be deserialized" in {
-    val deserializer = new K4ObjectDeserializer("Object[list={}]")
+    val deserializer = FACTORY.of("Object[list={}]")
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
     deserializer.readCollectionBegin()
@@ -134,7 +135,7 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
   }
 
   "Invalid collection being" should "result in error" in {
-    val deserializer = new K4ObjectDeserializer("Object[list=123]")
+    val deserializer = FACTORY.of("Object[list=123]")
     deserializer.readObjectBegin()
     deserializer.readPropertyName()
     assertThrows[LexicalError](deserializer.readCollectionBegin())
@@ -163,7 +164,7 @@ class K4ObjectSerializerTest extends AnyFlatSpec {
     val input = "C[c1=A[a1=\"abc\" a2=123 a3=false] c2=B[b1=123.45]]"
     val expected = C(A("abc", 123, a3 = false), B(123.45))
 
-    val c = cRW.read(new K4ObjectDeserializer(input))
+    val c = cRW.read(FACTORY.of(input))
 
     assert(c == expected)
   }
