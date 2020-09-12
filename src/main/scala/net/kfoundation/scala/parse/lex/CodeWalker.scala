@@ -42,6 +42,7 @@ class CodeWalker(inputName: String, input: InputStream) {
   private var begin = new CodeLocation(inputName)
   private val end = new MutableCodeLocation(inputName)
   private val buffer = new ByteArrayOutputStream()
+  private val history = new ByteArrayOutputStream()
 
 
   private def step(): Unit = {
@@ -65,6 +66,8 @@ class CodeWalker(inputName: String, input: InputStream) {
   def commit(): CodeRange = {
     val b = begin
     begin = end.immutableCopy
+    val bytes = buffer.toByteArray
+    history.write(bytes, 0, bytes.length)
     buffer.reset()
     new CodeRange(inputName, b, begin)
   }
@@ -244,4 +247,6 @@ class CodeWalker(inputName: String, input: InputStream) {
     }
     ch
   }
+
+  override def toString: String = "End: " + `end`.toString + ", History: " + UString.of(history.toByteArray) + ", Buffer: " + UString.of(buffer.toByteArray)
 }

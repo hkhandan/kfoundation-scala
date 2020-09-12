@@ -7,14 +7,82 @@ import net.kfoundation.scala.encoding.XmlEscape
 import net.kfoundation.scala.io.Path
 import net.kfoundation.scala.parse.CodeLocation
 import net.kfoundation.scala.parse.lex._
+import net.kfoundation.scala.serialization.internals.CommonSymbols._
 import net.kfoundation.scala.serialization.internals.ObjectStreamStateMachine
+import net.kfoundation.scala.serialization.internals.XmlSymbols._
 
 import scala.annotation.tailrec
 
 
 
 object XmlObjectDeserializer {
+
   class MetaData(val version: UString, val encoding: UString)
+
+  private class AttributeReader() {
+    private var _names: Seq[UString] = Seq()
+    private var _values: Seq[Option[UString]] = Seq()
+
+    def this(walker: CodeWalker) = {
+      this()
+
+      var hasMore = true
+
+      while(hasMore) {
+        walker.skipSpaces()
+        hasMore = false
+
+        IdentifierToken.reader
+          .tryRead(walker)
+          .foreach(id => {
+            _names = _names :+ id.value
+
+            walker.skipSpaces()
+            if (!walker.tryRead(EQ)) {
+              throw walker.lexicalErrorAtCurrentLocation("'=' expected")
+            }
+
+            walker.skipSpaces()
+            if(walker.tryRead(NULL)) {
+              _values = _values :+ None
+            } else {
+              _values = _values :+ StringToken.reader
+                .tryRead(walker)
+                .map(_.value)
+                .orElse(
+                  throw walker.lexicalErrorAtCurrentLocation("Attribute value expected"))
+            }
+
+            hasMore = true
+          })
+      } // while(hasMore)
+    }
+
+    def hasMore: Boolean = _values.nonEmpty
+
+    def nextName(): UString = {
+      val name = _names.head
+      _names = _names.tail
+      name
+    }
+
+    def nextValue(): UString = {
+      val value = _values.head
+      _values = _values.tail
+      value.orNull
+    }
+
+    def isNextValueNull: Boolean = _values.head.isEmpty
+
+    def get(name: UString): Option[UString] = {
+      val l = _names.indexOf(name)
+      if(l > 0) {
+        _values(l)
+      } else {
+        None
+      }
+    }
+  }
 
   val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
     override def of(str: UString): ObjectDeserializer =
@@ -32,63 +100,44 @@ object XmlObjectDeserializer {
 
 class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeserializer {
   import XmlObjectDeserializer._
-  import internals.CommonSymbols._
-  import internals.XmlSymbols._
 
 
   private val stateMachine = new ObjectStreamStateMachine
-  private var isInsideTag = false
   private var currentPropertyName: Option[UString] = None
-
-
-  private def tryReadPrologBeing(): Boolean = walker.tryRead(PROLOG_BEGIN)
-
-
-  private def tryReadPrologEnd(): Boolean = walker.tryRead(PROLOG_END)
+  private var attributes: AttributeReader = new AttributeReader()
+  private var isEmptyTag: Boolean = false
+  private var endTag: Option[UString] = None
 
 
   private def tryReadTagBegin(): Option[UString] =
     if(walker.tryRead(LT)) {
-      if(walker.tryReadAll(_ != SPACE) == 0) {
-        throw walker.lexicalErrorAtBeginning("tag name expected")
-      }
-      val value = walker.getCurrentSelection
       walker.commit()
-      Some(value)
+      Some(IdentifierToken.reader
+        .tryRead(walker)
+        .getOrElse(
+          throw walker.lexicalErrorAtBeginning("tag name expected, " + stateMachine))
+        .value)
     } else {
       None
     }
 
 
-  private def tryReadEmptyTagEnd(): Boolean = {
-    walker.skipSpaces()
+  private def tryReadEmptyTagEnd(): Boolean =
     if(walker.tryRead(SLASH_GT)) {
       walker.commit()
       true
     } else {
       false
     }
-  }
 
 
-  private def tryReadTagEnd(): Boolean = walker.tryRead(GT)
-
-
-  private def readAttribName(): UString = IdentifierToken.reader
-    .tryRead(walker)
-    .map(n => {
-      if(!walker.tryRead(EQ)) {
-        throw walker.lexicalErrorAtBeginning("'=' expected")
-      }
-      n.value
-    })
-    .getOrElse(throw walker.lexicalErrorAtBeginning("attribute name expected"))
-
-
-  private def readAttribValue(): UString = StringToken.reader
-    .tryRead(walker)
-    .getOrElse(throw walker.lexicalErrorAtBeginning("bad or missing attribute value"))
-    .value
+  private def tryReadTagEnd(): Boolean =
+    if(walker.tryRead(GT)) {
+      walker.commit()
+      true
+    } else {
+      false
+    }
 
 
   private def tryReadEscapeSequence: Option[UString] =
@@ -113,6 +162,7 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
 
     var hasMore = true
     while(hasMore) {
+      hasMore = false
       skipComments()
       val nRead = walker.tryReadAll(cp => cp != AMP_CP && cp != TAG_BEGIN_CP)
       if(nRead > 0)  {
@@ -134,12 +184,16 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
     if(!walker.tryRead(LT_SLASH)) {
       None
     } else {
-      IdentifierToken.reader.tryRead(walker).map(v => {
-        if(!walker.tryRead(GT)) {
-          throw walker.lexicalErrorAtBeginning("'>' expected")
-        }
-        v.value
-      })
+      walker.commit()
+      IdentifierToken.reader
+        .tryRead(walker)
+        .map(v => {
+            if(!walker.tryRead(GT)) {
+              throw walker.lexicalErrorAtBeginning("'>' expected")
+            }
+            walker.commit()
+            v.value
+          })
     }
 
 
@@ -161,27 +215,22 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
   }
 
 
-  def tryReadProlog(): Option[MetaData] =
-    if(tryReadPrologBeing()) {
-      var version: Option[UString] = None
-      var encoding: Option[UString] = None
-
-      skipCommentsAndSpaces()
-      while(!tryReadPrologEnd()) {
-        val name = readAttribName()
-        val value = readAttribValue()
-        name match {
-          case VERSION => version = Some(value)
-          case ENCODING => encoding = Some(value)
-        }
+  def tryReadProlog(): Option[MetaData] = {
+    skipCommentsAndSpaces()
+    if(walker.tryRead(PROLOG_BEGIN)) {
+      val attribReader = new AttributeReader(walker)
+      walker.skipSpaces()
+      if(!walker.tryRead(PROLOG_END)) {
+        throw walker.lexicalErrorAtCurrentLocation(s"'$PROLOG_END' expected")
       }
-
+      walker.commit()
       Some(new MetaData(
-        version.getOrElse(UString.EMPTY),
-        encoding.getOrElse(UString.EMPTY)))
+        attribReader.get(VERSION).getOrElse(""),
+        attribReader.get(ENCODING).getOrElse("")))
     } else {
       None
     }
+  }
 
 
   override def readObjectBegin(): Option[UString] = {
@@ -192,60 +241,54 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
     }
 
     if(currentPropertyName.isDefined) {
-      if(isInsideTag) {
-        throw walker.lexicalErrorAtBeginning("Illegal attempt to read an object as value of an attribute")
-      }
       stateMachine.objectBegin(currentPropertyName.get)
       currentPropertyName = None
       None
     } else {
+      walker.skipSpaces()
       val name = tryReadTagBegin().getOrElse(
-        throw walker.lexicalErrorAtBeginning("Expected XML tag"))
-      isInsideTag = true
+        throw walker.lexicalErrorAtBeginning("XML opening tag expected"))
       stateMachine.objectBegin(name)
+      attributes = new AttributeReader(walker)
+      walker.skipSpaces()
+      isEmptyTag = tryReadEmptyTagEnd()
+      if(!isEmptyTag && !tryReadTagEnd()) {
+        throw walker.lexicalErrorAtCurrentLocation(s"'$GT' or '$SLASH_GT' expected")
+      }
       Some(name)
     }
   }
 
 
   override def readObjectEnd(): Option[UString] =
-    if(isInsideTag) {
-      isInsideTag = false
-      if(tryReadEmptyTagEnd()) {
-        stateMachine.objectEnd()
-      } else if(tryReadTagEnd()){
-        Some(readObjectEndByClosingTag())
-      } else {
-        throw walker.lexicalErrorAtBeginning("'>' expected")
-      }
+    if(isEmptyTag) {
+      stateMachine.objectEnd()
+    } else if(endTag.isDefined) {
+      stateMachine.objectEnd(endTag.get)
+      val t = endTag
+      endTag = None
+      t
     } else {
-      Some(readObjectEndByClosingTag())
+      val maybeName = tryReadClosingTag()
+      if(maybeName.isEmpty) {
+        throw walker.lexicalErrorAtCurrentLocation("XML closing tag expected for: " + stateMachine.peek)
+      }
+      stateMachine.objectEnd(maybeName.get)
+      maybeName
     }
-
-
-  private def readObjectEndByClosingTag(): UString = {
-    val name = tryReadClosingTag().getOrElse(
-      throw walker.lexicalErrorAtBeginning("Expected XML closing tag"))
-
-    val expectedName = stateMachine.objectEnd().getOrElse(
-      throw new RuntimeException("State machine does not contain tag name. This should not have happened."))
-
-    if(!name.equals(expectedName)) {
-      throw walker.lexicalErrorAtBeginning("Expected end tag for \""
-        + expectedName + "\" but found: " + name)
-    }
-
-    name
-  }
 
 
   override def readCollectionBegin(): Unit =
-    currentPropertyName.map(n => stateMachine.collectionBegin(n))
-      .getOrElse(throw walker.lexicalErrorAtBeginning(
-        "Illegal attempt reading a collection that does not follow a property definition"))
+    currentPropertyName.map(n => {
+      stateMachine.collectionBegin(n)
+      currentPropertyName = None
+    })
+    .getOrElse(throw walker.lexicalErrorAtBeginning(
+      "Illegal attempt reading a collection that does not follow a property definition"))
 
 
-  override def tryReadCollectionEnd(): Boolean =
+  override def tryReadCollectionEnd(): Boolean = {
+    walker.skipSpaces()
     tryReadClosingTag().exists(tagName => {
       val expected = stateMachine.collectionEnd()
         .getOrElse(throw new RuntimeException(
@@ -258,14 +301,76 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
 
       true
     })
+  }
 
 
-  override def readStringLiteral(): UString =
-    if(isInsideTag) {
-      readAttribValue()
+  override def tryReadPropertyName(): Option[UString] = {
+    if(attributes.hasMore) {
+      stateMachine.property()
+      currentPropertyName = None
+      Some(attributes.nextName())
     } else {
-      readText()
+      walker.skipSpaces()
+      endTag = tryReadClosingTag()
+
+      if(endTag.isDefined) {
+        None
+      } else {
+        walker.skipSpaces()
+
+        currentPropertyName = tryReadTagBegin()
+        if (currentPropertyName.isDefined) {
+          stateMachine.property()
+        }
+
+        isEmptyTag = false
+
+        if (!tryReadTagEnd()) {
+          if (!tryReadEmptyTagEnd()) {
+            throw walker.lexicalErrorAtCurrentLocation("'>' or '/>' expected")
+          } else {
+            isEmptyTag = true
+          }
+        }
+
+        currentPropertyName
+      }
     }
+  }
+
+
+  override def tryReadNullLiteral(): Boolean =
+    if(attributes.hasMore) {
+      if(attributes.isNextValueNull) {
+        stateMachine.literal()
+        attributes.nextValue()
+        true
+      } else {
+        false
+      }
+    } else {
+      isEmptyTag
+    }
+
+
+  override def readStringLiteral(): UString = {
+    stateMachine.literal()
+    if(attributes.hasMore) {
+      attributes.nextValue()
+    } else {
+      val value = readText()
+      val propName = currentPropertyName.getOrElse(
+        new RuntimeException("Property name is missing. This should not have happened."))
+      val name = tryReadClosingTag().getOrElse(
+        throw walker.lexicalErrorAtCurrentLocation("XML closing tag expected for element: " + propName))
+      if(!name.equals(propName)) {
+        throw walker.lexicalErrorAtCurrentLocation(
+          "Closing tag for \"" + propName + "\" expected but found: " + name)
+      }
+      currentPropertyName = None
+      value
+    }
+  }
 
 
   override def readIntegerLiteral(): Long = {
@@ -294,18 +399,6 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
     case TRUE => true
     case FALSE => false
     case x => throw walker.lexicalErrorAtBeginning("Expected a boolean value but found: " + x)
-  }
-
-
-  override def tryReadPropertyName(): Option[UString] = if(isInsideTag) {
-    if(tryReadTagEnd()) {
-      isInsideTag = false
-      tryReadTagBegin()
-    } else {
-      Some(readAttribName())
-    }
-  } else {
-    tryReadTagBegin()
   }
 
 

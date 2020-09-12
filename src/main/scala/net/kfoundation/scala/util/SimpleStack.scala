@@ -1,7 +1,6 @@
 package net.kfoundation.scala.util
 
 class SimpleStack[T] {
-
   private var items = List[T]()
 
   def push(item: T): Unit = items = items :+ item
@@ -18,4 +17,5 @@ class SimpleStack[T] {
 
   def getItems: List[Any] = List.from(items)
 
+  override def toString: String = items.toString()
 }

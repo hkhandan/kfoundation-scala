@@ -145,7 +145,7 @@ class UString private (private val octets: Array[Byte]) {
 
   @tailrec
   private def octetsEqual(i: Int, thatOctets: Array[Byte]): Boolean =
-    if(i <= 0) {
+    if(i < 0) {
       true
     } else if(octets(i) == thatOctets(i)) {
       octetsEqual(i - 1, thatOctets)
@@ -291,8 +291,8 @@ class UString private (private val octets: Array[Byte]) {
 
   override def equals(other: Any): Boolean = other match {
     case that: UString => (this eq that) ||
-      this.octets.length == that.octets.length &&
-        octetsEqual(octets.length - 1, that.octets)
+      (this.octets.length == that.octets.length &&
+        octetsEqual(octets.length - 1, that.octets))
     case _ => false
   }
 }

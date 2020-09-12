@@ -15,6 +15,7 @@ object XmlSymbols {
   val LT: UChar = '<'
   val TAG_BEGIN_CP: Int = LT.codePoint
   val GT: UChar = '>'
+  val GT_CP: Int = GT.codePoint
   val EQ: UChar = '='
   val AMP: UChar = '&'
   val AMP_CP: Int = AMP.codePoint

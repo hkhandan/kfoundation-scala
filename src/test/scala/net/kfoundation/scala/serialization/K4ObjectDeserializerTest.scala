@@ -168,5 +168,4 @@ class K4ObjectDeserializerTest extends AnyFlatSpec {
 
     assert(c == expected)
   }
-
 }

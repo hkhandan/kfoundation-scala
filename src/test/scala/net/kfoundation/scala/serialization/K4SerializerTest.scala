@@ -21,7 +21,7 @@ class K4SerializerTest extends AnyFlatSpec {
          |    A[a1="three" a2=3]}
          |  c2=B[b1=false b2=123.456]]""".stripMargin
 
-    val output = C_WRITER.toString(K4ObjectSerializer.FACTORY, input)
+    val output = C_RW.toString(K4ObjectSerializer.FACTORY, input)
 
     assert(output == expected)
   }

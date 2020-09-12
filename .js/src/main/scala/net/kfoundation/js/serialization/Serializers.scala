@@ -1,6 +1,6 @@
 package net.kfoundation.js.serialization
 
-import net.kfoundation.scala.serialization._
+import net.kfoundation.scala.{serialization => s}
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -10,15 +10,15 @@ import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 object Serializers {
 
   @JSExport
-  val JSON: ObjectSerializerFactory = JsonObjectSerializer.of(_)
+  val JSON: ObjectSerializerFactory = s.JsonObjectSerializer.FACTORY.of(_)
 
   @JSExport
-  val K4: ObjectSerializerFactory = K4ObjectSerializer.of(_)
+  val K4: ObjectSerializerFactory = s.K4ObjectSerializer.FACTORY.of(_)
 
   @JSExport
-  val XML: ObjectSerializerFactory = XmlObjectSerializer.of(_)
+  val XML: ObjectSerializerFactory = s.XmlObjectSerializer.FACTORY.of(_)
 
   @JSExport
-  val YAML: ObjectSerializerFactory = YamlObjectSerializer.of(_)
+  val YAML: ObjectSerializerFactory = s.YamlObjectSerializer.FACTORY.of(_)
 
 }

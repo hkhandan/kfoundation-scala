@@ -36,6 +36,6 @@ class StringTokenTest extends AnyFlatSpec {
   "Bad escape sequence" should "cause error" in {
     val th = intercept[LexicalError](parse("\"test \\g\""))
     assert(th.getMessage ==
-      "UString@1:9: Invalid escape sequence '\\g'")
+      "[<buffer>@1:9] Invalid escape sequence '\\g'")
   }
 }

@@ -3,20 +3,11 @@ package net.kfoundation.scala.serialization
 import net.kfoundation.scala.UString.UStringInterpolation
 import org.scalatest.flatspec.AnyFlatSpec
 
-
-
-class XmlObjectSerializerTest extends AnyFlatSpec {
+class XmlDeserializerTest extends AnyFlatSpec {
   import SerializationTestCommons._
 
-  "Object" should "be serialized" in {
-    val input = C(
-      Array(
-        A("one", 1),
-        A("two", 2),
-        A("three", 3)),
-      B(false, 123.456))
-
-    val expected =
+  "String" should "be deserialized" in {
+    val input =
       U"""<C>
          |    <c1>
          |        <A>
@@ -36,7 +27,9 @@ class XmlObjectSerializerTest extends AnyFlatSpec {
          |    </c2>
          |</C>""".stripMargin
 
-    val output = C_WRITER.toString(XmlObjectSerializer.FACTORY, input)
+    val expected = C(List(A("one",1), A("two",2), A("three",3)),B(false,123.456))
+
+    val output = C_RW.read(XmlObjectDeserializer.FACTORY, input)
 
     assert(output == expected)
   }

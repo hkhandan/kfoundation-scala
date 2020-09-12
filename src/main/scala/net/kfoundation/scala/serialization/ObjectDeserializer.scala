@@ -21,6 +21,9 @@ abstract class ObjectDeserializer {
   def readBooleanLiteral(): Boolean
   protected def getCurrentLocation: CodeLocation
 
+  def tryReadNullLiteral(): Boolean =
+    throw new DeserializationError(
+      "Reading null is not supported in this deserializer")
 
   def readLiteralOrString[T](cls: Class[T]): Either[T, UString] =
     Right(readStringLiteral())
@@ -37,7 +40,7 @@ abstract class ObjectDeserializer {
   def readObjectBegin(expectedName: UString): Unit = readObjectBegin()
     .foreach(name => if(!name.equals(expectedName))
       throw new DeserializationError(
-        s"At $getCurrentLocation object of type $expectedName was expected but found: $name"))
+        s"${getCurrentLocation.getLocationTag} object of type $expectedName was expected but found: $name"))
 
 
   def readPropertyName(): UString = tryReadPropertyName()

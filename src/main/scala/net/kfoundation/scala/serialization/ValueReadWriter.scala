@@ -82,4 +82,22 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
         toConversion(ValueReadWriter.this.read(deserializer))
     }
 
+
+  def seqReadWriter: ValueReadWriter[Seq[T]] = new ValueReadWriter[Seq[T]] {
+    override def write(serializer: ObjectSerializer, value: Seq[T]): Unit = {
+      serializer.writeCollectionBegin()
+      value.foreach(item => ValueReadWriter.this.write(serializer, item))
+      serializer.writeCollectionEnd()
+    }
+
+    override def read(deserializer: ObjectDeserializer): Seq[T] = {
+      var result = Seq[T]()
+      deserializer.readCollectionBegin()
+      while(!deserializer.tryReadCollectionEnd()) {
+        result = result :+ ValueReadWriter.this.read(deserializer)
+      }
+      result
+    }
+  }
+
 }

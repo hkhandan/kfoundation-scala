@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<localization>
-    <scope name="net.kfoundation.scala.io">
-        <key name="path-contains-slash-error">
-            <value lang="en">Path segment should not contain '/'. Provided: %s</value>
-        </key>
-    </scope>
-</localization>

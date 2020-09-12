@@ -28,7 +28,7 @@ publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(isSna
 val scalaGenDirectory = settingKey[File]("Generated sources")
 
 val generateReadWritersImpl = Def.task {
-  val targetDir = scalaGenDirectory.value / "net" / "kfoundation" / "serialization"
+  val targetDir = scalaGenDirectory.value / "net" / "kfoundation" / "scala" / "serialization"
   Seq(
     ReadWriterGenerator.generateReaders(targetDir),
     ReadWriterGenerator.generateWriters(targetDir),

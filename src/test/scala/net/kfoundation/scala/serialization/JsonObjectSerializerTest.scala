@@ -34,7 +34,7 @@ class JsonObjectSerializerTest extends AnyFlatSpec {
        |  }
        |}""".stripMargin
 
-    val output = C_WRITER.toString(JsonObjectSerializer.FACTORY, input)
+    val output = C_RW.toString(JsonObjectSerializer.FACTORY, input)
 
     assert(expected == output)
   }

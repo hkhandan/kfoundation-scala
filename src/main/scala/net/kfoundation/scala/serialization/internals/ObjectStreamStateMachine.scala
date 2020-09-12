@@ -7,7 +7,10 @@ import net.kfoundation.scala.util.SimpleStack
 
 
 object ObjectStreamStateMachine {
-  private class StackItem(val isCollection: Boolean, val name: Option[UString])
+  private class StackItem(val isCollection: Boolean, val name: Option[UString]) {
+    override def toString: String = name.getOrElse("<no-name>") + (
+      if(isCollection) "[]" else "")
+  }
 
   object State extends Enumeration {
     val STREAM_BEGIN, STREAM_END, OBJECT_BEGIN, OBJECT_END, COLLECTION_BEGIN,
@@ -121,6 +124,15 @@ class ObjectStreamStateMachine {
   def isInCollection: Boolean = stack.peek().exists(_.isCollection)
 
 
+  def peek: Option[UString] = stack.peek().flatMap(_.name)
+
+
   def error(message: String): ObjectStreamError = new ObjectStreamError(
-    "Error at [" + stack.getItems.mkString(" > ") + "]: " + message)
+    "Error at [" + getPath + "]: " + message)
+
+
+  def getPath: String = stack.getItems.mkString(" > ")
+
+
+  override def toString: String = "Path: " + getPath + ", State: " + state
 }
