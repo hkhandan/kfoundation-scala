@@ -149,15 +149,15 @@ class K4ObjectDeserializerTest extends AnyFlatSpec {
     case class C(c1: A, c2: B)
 
     implicit val aRW: ValueReadWriter[A] =
-      readWriterOf[UString, Int, Boolean]("A", "a1", "a2", "a3").toReadWriterOf(
+      tuple("A", "a1" -> STRING, "a2" -> INT, "a3" -> BOOLEAN).toReadWriterOf(
         v => A(v._1, v._2, v._3),
         a => (a.a1, a.a2, a.a3))
 
     implicit val bRW: ValueReadWriter[B] =
-      readWriterOf[Double]("B", "b1").toReadWriterOf(v => B(v), b => b.b1)
+      tuple("B", "b1" -> DOUBLE).toReadWriterOf(v => B(v), b => b.b1)
 
     implicit val cRW: ValueReadWriter[C] =
-      readWriterOf[A, B]("C", "c1", "c2").toReadWriterOf(
+      tuple("C", "c1" -> aRW, "c2" -> bRW).toReadWriterOf(
         v => C(v._1, v._2),
         c => (c.c1, c.c2))
 

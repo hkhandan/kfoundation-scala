@@ -30,9 +30,7 @@ val scalaGenDirectory = settingKey[File]("Generated sources")
 val generateReadWritersImpl = Def.task {
   val targetDir = scalaGenDirectory.value / "net" / "kfoundation" / "scala" / "serialization"
   Seq(
-    ReadWriterGenerator.generateReaders(targetDir),
-    ReadWriterGenerator.generateWriters(targetDir),
-    ReadWriterGenerator.generateReadWriters(targetDir))
+    ReadWriterGenerator._generateReadWriters(targetDir))
 }
 
 

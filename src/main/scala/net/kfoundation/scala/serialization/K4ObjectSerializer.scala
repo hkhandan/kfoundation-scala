@@ -10,7 +10,6 @@ import net.kfoundation.scala.serialization.internals.{IndentingWriter, ObjectStr
 object K4ObjectSerializer {
   val DEFAULT_INDENT_SIZE = 2
 
-
   val FACTORY: ObjectSerializerFactory = new ObjectSerializerFactory {
     override def of(output: OutputStream, indentSize: Int, compact: Boolean):
     ObjectSerializer =

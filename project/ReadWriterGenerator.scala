@@ -101,31 +101,40 @@ object ReadWriterGenerator {
     |    reader.read(deserializer)
     |}
     |
-    |private class ValueReadWriter1[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit rw1: ValueReadWriter[T1])
+    |
+    |class Tuple1ReadWriter[T1] (
+    |  typeName: UString,
+    |    field1: (UString, ValueReadWriter[T1]))
     |  extends ValueReadWriter[T1]
     |{
-    |  override def write(serializer: ObjectSerializer, value: T1): Unit =
+    |  override def write(serializer: ObjectSerializer, value: T1): Unit = {
     |    serializer.writeObjectBegin(typeName)
-    |      .writePropertyName(fieldName1).writeValue(value)(rw1)
-    |      .writeObjectEnd()
+    |      field1._2.write(serializer, value)
+    |    serializer.writeObjectEnd()
+    |  }
     |
     |  override def read(deserializer: ObjectDeserializer): T1 = {
+    |    deserializer.readObjectBegin(typeName)
     |    var v1: Option[T1] = None
-    |    deserializer.readObject(typeName, _ match {
-    |      case `fieldName1` => v1 = Some(rw1.read(deserializer))
-    |      case _ =>
-    |    })
-    |    v1.getOrElse(rw1.getDefaultValue)
+    |    var propName = deserializer.tryReadPropertyName()
+    |    while(propName.isDefined) {
+    |      propName match {
+    |        case Some(field1._1) => v1 = Some(field1._2.read(deserializer))
+    |        case Some(x) => throw new DeserializationError("Unrecognized field: " + x)
+    |      }
+    |      propName = deserializer.tryReadPropertyName()
+    |    }
+    |    deserializer.readObjectEnd()
+    |    v1.getOrElse(field1._2.getDefaultValue)
     |  }
     |}
     |
-    |def readWriterOf[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit readWriter1: ValueReadWriter[T1])
-    |: ValueReadWriter[T1] =
-    |  new ValueReadWriter1[T1](typeName, fieldName1)(readWriter1)
+    |def tuple[T1](typeName: String,
+    |  field1: (String, ValueReadWriter[T1])):
+    |ValueReadWriter[T1] =
+    |  new Tuple1ReadWriter[T1](UString.of(typeName),
+    |    UString.of(field1._1) -> field1._2)
+    |
     |""".stripMargin
 
   private val STANDARD_WRITERS = """
@@ -162,10 +171,11 @@ object ReadWriterGenerator {
   def typeParam(n: Int): String = list(n, ", ", n => s"T$n")
   def tupleTypeParam(n: Int): String = n.toString + "[" + typeParam(n) + "]"
   def fieldNameList(n: Int): String = list(n, ", ", i => s"fieldName$i: UString")
+  def rwMapList(n: Int): String = list(n, ", ", i => s"field$i: (UString, T$i)")
   def className(prefix: String, n: Int): String = prefix + tupleTypeParam(n)
   def readerClassName(n: Int): String = className("ValueReader", n)
   def writerClassName(n: Int): String = className("ValueWriter", n)
-  def readWriterClassName(n: Int): String = className("ValueReadWriter", n)
+  def readWriterClassName(n: Int): String = s"Tuple${n}ReadWriter"
 
   def readMethod(n: Int, prefix: String): StringBuilder = new StringBuilder()
     .append("  override def read(deserializer: ObjectDeserializer): Tuple").append(tupleTypeParam(n)).append(" = {\n")
@@ -210,10 +220,59 @@ object ReadWriterGenerator {
     .append("  implicit ").append(list(n, ", ", i => s"rw$i: ValueReadWriter[T$i]")).append(")\n")
     .append("  extends ValueReadWriter[Tuple").append(tupleTypeParam(n)).append("]\n")
     .append("{\n")
-    .append(writeMethod(n, "rw")).append("\n")
+    .append(writeMethod(n, "rw")).append('\n')
     .append(readMethod(n, "rw"))
     .append("}\n\n")
     .toString()
+
+
+  def _readWriterClass(n: Int): String = new StringBuilder()
+    .append("class ").append(readWriterClassName(n)).append('[').append(typeParam(n)).append("] (\n")
+    .append("  typeName: UString,\n")
+    .append("  ").append(list(n, ", ", i => s"  field$i: (UString, ValueReadWriter[T$i])")).append(")\n")
+    .append("  extends ValueReadWriter[(").append(typeParam(n)).append(")]\n")
+    .append("{\n")
+    .append(_writeMethod(n)).append('\n')
+    .append(_readMethod(n))
+    .append("}\n\n")
+    .toString()
+
+
+  def _readMethod(n: Int): String = new StringBuilder()
+    .append("  override def read(deserializer: ObjectDeserializer): (").append(typeParam(n)).append(") = {\n")
+    .append("    deserializer.readObjectBegin(typeName)\n")
+    .append(list(n, "\n", i => s"    var v$i: Option[T$i] = None")).append("\n")
+    .append("    var propName = deserializer.tryReadPropertyName()\n")
+    .append("    while(propName.isDefined) {\n")
+    .append("      propName match {\n")
+    .append(list(n, "", i => s"        case Some(field$i._1) => v$i = Some(field$i._2.read(deserializer))\n"))
+    .append("        case Some(x) => throw new DeserializationError(\"Unrecognized field: \" + x)\n")
+    .append("      }\n")
+    .append("      propName = deserializer.tryReadPropertyName()\n")
+    .append("    }\n")
+    .append("    deserializer.readObjectEnd()\n")
+    .append("    (").append(list(n, ",\n    ", i => s"v$i.getOrElse(field$i._2.getDefaultValue)")).append(")\n")
+    .append("  }\n")
+    .toString()
+
+
+  def _writeMethod(n: Int): String = new StringBuilder()
+    .append("  override def write(serializer: ObjectSerializer, value: (").append(typeParam(n)).append(")): Unit = {\n")
+    .append("    serializer.writeObjectBegin(typeName)\n")
+    .append(list(n, "\n", i => s"    serializer.writePropertyName(field$i._1)\n    field$i._2.write(serializer, value._$i)")).append("\n")
+    .append("    serializer.writeObjectEnd()\n")
+    .append("  }\n")
+    .toString()
+
+
+  def _factory(n: Int): String = new StringBuilder()
+    .append("  def tuple[").append(typeParam(n)).append("](typeName: String,\n")
+    .append(list(n, ",\n", i => s"    field$i: (String, ValueReadWriter[T$i])")).append("):\n")
+    .append("  ValueReadWriter[(").append(typeParam(n)).append(")] = \n")
+    .append("    new ").append(readWriterClassName(n)).append("[").append(typeParam(n)).append("](UString.of(typeName),\n")
+    .append(list(n, ",\n", i => s"      UString.of(field$i._1) -> field$i._2")).append(")\n\n")
+    .toString()
+
 
   def factory(prefix: String, typeName: String, n: Int): String = new StringBuilder()
     .append("def ").append(prefix).append("Of[").append(typeParam(n)).append("](\n")
@@ -255,5 +314,22 @@ object ReadWriterGenerator {
 
   def generateReadWriters(dir: File): File = generateFile(dir, "ValueReadWriters",
     STANDARD_READ_WRITERS, readWriterClass, readWriterFactory)
+
+  def _generateReadWriters(dir: File): File = {
+    val outputFile = dir / s"ValueReadWriters.scala"
+    IO.createDirectory(dir)
+    val writer = new FileWriter(outputFile)
+    writer.write("package net.kfoundation.scala.serialization\n")
+    writer.write("import net.kfoundation.scala.UString\n")
+    writer.write(s"object ValueReadWriters {\n")
+    writer.write(STANDARD_READ_WRITERS)
+    writer.write("\n")
+    2.to(N).foreach(i => writer.write(_readWriterClass(i)))
+    2.to(N).foreach(i => writer.write(_factory(i)))
+    writer.write("}")
+    writer.close()
+    println("Generated: " + outputFile)
+    outputFile
+  }
 
 }

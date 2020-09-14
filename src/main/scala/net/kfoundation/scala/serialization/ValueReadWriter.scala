@@ -83,7 +83,7 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
     }
 
 
-  def seqReadWriter: ValueReadWriter[Seq[T]] = new ValueReadWriter[Seq[T]] {
+  def seq: ValueReadWriter[Seq[T]] = new ValueReadWriter[Seq[T]] {
     override def write(serializer: ObjectSerializer, value: Seq[T]): Unit = {
       serializer.writeCollectionBegin()
       value.foreach(item => ValueReadWriter.this.write(serializer, item))
