@@ -1,15 +1,31 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.parse.lex
 
+import net.kfoundation.scala.UString
 import net.kfoundation.scala.parse.CodeRange
-import net.kfoundation.scala.{UString, UChar}
 
-import scala.collection.{immutable, mutable}
+import scala.collection.{mutable, Seq}
+
 
 object KeywordToken {
+
+  /**
+   * Attempts to read a keyword from the input source. Determination of what
+   * constitutes a keyword is up to the subclass, as long as it is a sequence
+   * of alphabetical letters.
+   */
   abstract class Reader extends TokenReader[KeywordToken] {
     private val values = new mutable.ListBuffer[UString]
 
-    def getValues: immutable.Seq[UString] = values.toStream
+    def getValues: Seq[UString] = values.toSeq
 
     protected def add(newValue: UString): UString = {
       values.append(newValue)
@@ -17,24 +33,21 @@ object KeywordToken {
     }
 
     override def tryRead(w: CodeWalker): Option[KeywordToken] =
-      if(w.tryReadAll(ch => UChar.isAlphabet(ch)) <= 0) {
-        None
-      } else {
-        val str = w.getCurrentSelection
-        values.find(_.equals(str))
-          .map(str => new KeywordToken(w.commit(), str))
-          .orElse({
-            w.rollback()
-            None
-          })
-      }
+      values.find(v => w.tryRead(v))
+        .map(v => new KeywordToken(w.commit(), v))
 
     def convert(id: IdentifierToken): Option[KeywordToken] =
       values.find(v => id.value.equals(v))
         .map(v => new KeywordToken(id, v))
   }
+
 }
 
+
+
+/**
+ * A portion of input text considered as a keyword.
+ */
 class KeywordToken(range: CodeRange, value: UString)
   extends Token[UString](range, value)
 {

@@ -1,7 +1,15 @@
-package net.kfoundation
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
+package net.kfoundation.scala.parse
 
 import net.kfoundation.scala.UString
-import net.kfoundation.scala.parse.CodeRange
 import net.kfoundation.scala.parse.lex.{CodeWalker, IdentifierToken}
 
 
@@ -16,7 +24,7 @@ class IdentifierTokenTest extends org.scalatest.flatspec.AnyFlatSpec {
   }
 
   "Single letter" should "be an identifier" in {
-    val expected = new IdentifierToken(new CodeRange("UString", 1, 1, 1), "a")
+    val expected = new IdentifierToken(CodeRange.of("String", 1, 1, 1, 0, 1), "a")
     assert(parse("a").contains(expected))
   }
 

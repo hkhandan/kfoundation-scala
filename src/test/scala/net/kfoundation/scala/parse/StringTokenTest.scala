@@ -1,4 +1,13 @@
-package net.kfoundation
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
+package net.kfoundation.scala.parse
 
 import net.kfoundation.scala.UString
 import net.kfoundation.scala.parse.lex.{CodeWalker, LexicalError, StringToken}
@@ -36,6 +45,6 @@ class StringTokenTest extends AnyFlatSpec {
   "Bad escape sequence" should "cause error" in {
     val th = intercept[LexicalError](parse("\"test \\g\""))
     assert(th.getMessage ==
-      "[<buffer>@1:9] Invalid escape sequence '\\g'")
+      "[$buffer@1:9] Invalid escape sequence '\\g'")
   }
 }

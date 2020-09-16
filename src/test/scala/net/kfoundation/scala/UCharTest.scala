@@ -1,9 +1,17 @@
-package net.kfoundation
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
+package net.kfoundation.scala
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
 import net.kfoundation.scala.UChar.{ArrayUtf8Writer, ByteArrayUtf8Reader, SingleUtf8Writer, StreamUtf8Reader, StreamUtf8Writer}
-import net.kfoundation.scala.UChar
 import org.scalatest.funsuite.AnyFunSuite
 
 

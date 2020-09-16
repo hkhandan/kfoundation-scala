@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.serialization
 
 import net.kfoundation.scala.UString
@@ -149,15 +158,15 @@ class K4ObjectDeserializerTest extends AnyFlatSpec {
     case class C(c1: A, c2: B)
 
     implicit val aRW: ValueReadWriter[A] =
-      tuple("A", "a1" -> STRING, "a2" -> INT, "a3" -> BOOLEAN).toReadWriterOf(
+      tuple("A", "a1" -> STRING, "a2" -> INT, "a3" -> BOOLEAN).mapRW(
         v => A(v._1, v._2, v._3),
         a => (a.a1, a.a2, a.a3))
 
     implicit val bRW: ValueReadWriter[B] =
-      tuple("B", "b1" -> DOUBLE).toReadWriterOf(v => B(v), b => b.b1)
+      tuple("B", "b1" -> DOUBLE).mapRW(v => B(v), b => b.b1)
 
     implicit val cRW: ValueReadWriter[C] =
-      tuple("C", "c1" -> aRW, "c2" -> bRW).toReadWriterOf(
+      tuple("C", "c1" -> aRW, "c2" -> bRW).mapRW(
         v => C(v._1, v._2),
         c => (c.c1, c.c2))
 

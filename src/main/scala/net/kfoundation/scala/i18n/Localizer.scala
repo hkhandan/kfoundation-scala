@@ -29,14 +29,19 @@ object Localizer {
     val plainNumberFormatter: NumberStyle,
     val currencyFormatter: NumberStyle
   )
+
+  val DEFAULT = new Localizer(null, null)
+
+  def l(key: String, args: Any*): String = DEFAULT.l(key)
 }
+
 
 class Localizer private(
   private val setup: Localizer.LocaleSetup,
   private val dictionary: Dictionary)
 {
 
-//  def l(key: String) = ???
+    def l(key: String): String = key
 //  def l(key: String, language: LanguageLike) = ???
 //  def l(utc: Date) = ???
 //  def l(utc: Date, format: DateTimeStyle) = ???

@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.serialization
 import java.io.InputStream
 
@@ -25,7 +34,7 @@ object JsonObjectDeserializer {
 }
 
 
-
+/** JSON object deserializer. */
 class JsonObjectDeserializer private(walker: CodeWalker) extends ObjectDeserializer {
   import internals.CommonSymbols._
 
@@ -128,7 +137,7 @@ class JsonObjectDeserializer private(walker: CodeWalker) extends ObjectDeseriali
     walker.skipSpaces()
     NumericToken.reader
       .tryRead(walker) match {
-      case Some(i: IntegralToken) => i.value
+      case Some(i: IntegralToken) => (i.value).toDouble
       case Some(d: DecimalToken) => d.value
       case _ => throw walker.lexicalErrorAtCurrentLocation("Decimal value expected")
     }

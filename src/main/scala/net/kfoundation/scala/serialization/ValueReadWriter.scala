@@ -1,79 +1,27 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.serialization
 
-import net.kfoundation.scala.UString
 
-import scala.annotation.tailrec
-import scala.collection.mutable
-
-
-
-object ValueReadWriter {
-  // TODO move these to generated code
-  class FlexObjectWriter(
-    typeName: UString,
-    properties: Map[UString, ValueReadWriter[Any]])
-    extends ValueWriter[Map[UString, Any]]
-  {
-    override def write(serializer: ObjectSerializer, value: Map[UString, Any]): Unit = {
-      serializer.writeObjectBegin(typeName)
-      value.foreach(kv => properties.get(kv._1)
-        .getOrElse(throw new SerializationError(s"""No writer provided for property "${kv._1}" of $typeName"""))
-        .write(serializer, kv._2))
-      serializer.writeObjectEnd()
-    }
-  }
-
-
-  class FlexObjectReader(
-    typeName: UString,
-    properties: Map[UString, ValueReadWriter[Any]])
-    extends ValueReader[Map[UString, Any]]
-  {
-    override def read(deserializer: ObjectDeserializer): Map[UString, Any] = {
-      val result = new mutable.HashMap[UString, Any]()
-
-      @tailrec
-      def loop(): Unit = {
-        val pToken = deserializer.tryReadPropertyName()
-        if(pToken.isDefined) {
-          val pName = pToken.get
-          val reader = properties.getOrElse(pName, throw new DeserializationError(
-            "Reader for property is not provided: " + typeName + "." + pName))
-          result.put(pName, reader.read(deserializer))
-          loop()
-        }
-      }
-
-      deserializer.readObjectBegin(typeName)
-      loop()
-      deserializer.readObjectEnd()
-
-      result.toMap
-    }
-  }
-
-
-  class FlexObjectReaderWriter(
-    typeName: UString,
-    properties: Map[UString, ValueReadWriter[Any]])
-    extends ValueReadWriter[Map[UString, Any]]
-  {
-    private val reader = new FlexObjectReader(typeName, properties)
-    private val writer = new FlexObjectWriter(typeName, properties)
-
-    override def write(serializer: ObjectSerializer, value: Map[UString, Any]): Unit =
-      writer.write(serializer, value)
-
-    override def read(deserializer: ObjectDeserializer): Map[UString, Any] =
-      reader.read(deserializer)
-  }
-}
-
-
-
+/**
+ * Implementation of this trait can function both as reader and writer of
+ * values of type T.
+ * @tparam T type of values to be read or write.
+ */
 trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
 
-  def toReadWriterOf[S](implicit toConversion: T => S, fromConversion: S => T):
+  /**
+   * With bi-directional mapping to and from type S provided, this
+   * method produces a ValueReadWriter that can read values of type S.
+   */
+  def mapRW[S](implicit toConversion: T => S, fromConversion: S => T):
   ValueReadWriter[S] =
     new ValueReadWriter[S] {
       override def write(serializer: ObjectSerializer, value: S): Unit =
@@ -83,6 +31,9 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
     }
 
 
+  /**
+   * Produces a ValueReadWriter that can read or write sequence of T.
+   */
   def seq: ValueReadWriter[Seq[T]] = new ValueReadWriter[Seq[T]] {
     override def write(serializer: ObjectSerializer, value: Seq[T]): Unit = {
       serializer.writeCollectionBegin()

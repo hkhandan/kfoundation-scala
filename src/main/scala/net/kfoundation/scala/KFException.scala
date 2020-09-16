@@ -7,12 +7,19 @@
 //   ╚═╝  ╚═╝╚═╝
 // --------------------------------------------------------------------------
 
-package net.kfoundation.scala.serialization
+package net.kfoundation.scala
 
+import net.kfoundation.scala.i18n.Localizer.l
 
+object KFException {
+  private def findCause(args: Seq[Any]): Option[Throwable] =
+    args.find(_.isInstanceOf[Throwable])
+      .map(_.asInstanceOf[Throwable])
+}
 
-class SerializationError(message: String, cause: Throwable)
-  extends ObjectStreamError(message, cause)
+/** WIP */
+class KFException(key: String, args: Any*) extends
+  Exception(null, KFException.findCause(args).orNull)
 {
-  def this(message: String) = this(message, null)
+  override def getMessage: String = l(key, args)
 }

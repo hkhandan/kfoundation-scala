@@ -28,9 +28,11 @@ publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(isSna
 val scalaGenDirectory = settingKey[File]("Generated sources")
 
 val generateReadWritersImpl = Def.task {
-  val targetDir = scalaGenDirectory.value / "net" / "kfoundation" / "scala" / "serialization"
+  val targetDir = scalaGenDirectory.value
   Seq(
-    ReadWriterGenerator._generateReadWriters(targetDir))
+    ReadWriterGenerator._generateReadWriters(targetDir),
+    ReadWriterGenerator._generateWriters(targetDir),
+    ReadWriterGenerator._generateReaders(targetDir))
 }
 
 
@@ -48,22 +50,19 @@ resolvers ++= Seq(
   Resolver.mavenCentral)
 
 ThisBuild / libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test"
-ThisBuild / libraryDependencies += "org.scala-lang.modules" %%% "scala-xml" % "2.0.0-M1"
 
 ThisBuild / scalaVersion := latestScala
-ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value
+ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value / "net" / "kfoundation" / "scala" / "serialization"
 
 val scalaApi = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("."))
   .settings(
-    name := (ThisBuild / name).value,
-    Compile / unmanagedSourceDirectories += scalaGenDirectory.value)
-  .jsSettings(
+    Compile / unmanagedSourceDirectories += scalaGenDirectory.value,
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) })
 
 val kfoundation = project.in(file("."))
-  .aggregate(scalaApi.js, scalaApi.jvm)
+  .aggregate(scalaApi.jvm, scalaApi.js)
   .settings(
     Compile / sourceGenerators += generateReadWritersImpl,
     crossScalaVersions := scalaVersions,

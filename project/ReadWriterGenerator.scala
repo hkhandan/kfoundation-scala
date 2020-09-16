@@ -16,25 +16,57 @@ object ReadWriterGenerator {
     |  d.readObjectEnd()
     |}
     |
-    |private class ValueReader1[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit reader1: ValueReader[T1])
-    |  extends ValueReader[T1]
+    |class FlexObjectReader(
+    |  typeName: UString,
+    |  properties: Map[UString, ValueReadWriter[Any]])
+    |  extends ValueReader[Map[UString, Any]]
     |{
-    |  override def read(deserializer: ObjectDeserializer): T1 = {
-    |    var v1: Option[T1] = None
-    |    deserializer.readObject(typeName, _ match {
-    |      case `fieldName1` => v1 = Some(reader1.read(deserializer))
-    |    })
-    |    v1.getOrElse(reader1.getDefaultValue)
+    |  override def read(deserializer: ObjectDeserializer): Map[UString, Any] = {
+    |    val result = new scala.collection.mutable.HashMap[UString, Any]()
+    |
+    |    @scala.annotation.tailrec
+    |    def loop(): Unit = {
+    |      val pToken = deserializer.tryReadPropertyName()
+    |      if(pToken.isDefined) {
+    |        val pName = pToken.get
+    |        val reader = properties.getOrElse(pName, throw new DeserializationError(
+    |          "Reader for property is not provided: " + typeName + "." + pName))
+    |        result.put(pName, reader.read(deserializer))
+    |        loop()
+    |      }
+    |    }
+    |
+    |    deserializer.readObjectBegin(typeName)
+    |    loop()
+    |    deserializer.readObjectEnd()
+    |
+    |    result.toMap
     |  }
     |}
     |
-    |def readerOf[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit reader1: ValueReader[T1])
-    |: ValueReader[T1] =
-    |  new ValueReader1[T1](typeName, fieldName1)(reader1)
+    |""".stripMargin
+
+  private val STANDARD_WRITERS = """
+    |def writerOf[T](implicit writer: ValueWriter[T]): ValueWriter[T] = writer
+    |
+    |def writerOf(typeName: UString): ValueWriter[Unit] = (d, _) =>
+    |  d.writeObjectBegin(typeName)
+    |    .writeObjectEnd()
+    |
+    |class FlexObjectWriter(
+    |  typeName: UString,
+    |  properties: Map[UString, ValueReadWriter[Any]])
+    |  extends ValueWriter[Map[UString, Any]]
+    |{
+    |  override def write(serializer: ObjectSerializer, value: Map[UString, Any]): Unit = {
+    |    serializer.writeObjectBegin(typeName)
+    |    value.foreach(kv => properties.get(kv._1)
+    |      .getOrElse(throw new SerializationError("No writer provided for property \"" + kv._1 + "\" of" + typeName))
+    |      .write(serializer, kv._2))
+    |    serializer.writeObjectEnd()
+    |  }
+    |}
+    |
     |""".stripMargin
 
   private val STANDARD_READ_WRITERS = """
@@ -101,6 +133,20 @@ object ReadWriterGenerator {
     |    reader.read(deserializer)
     |}
     |
+    |class FlexObjectReadWriter(
+    |  typeName: UString,
+    |  properties: Map[UString, ValueReadWriter[Any]])
+    |  extends ValueReadWriter[Map[UString, Any]]
+    |{
+    |  private val reader = new ValueReaders.FlexObjectReader(typeName, properties)
+    |  private val writer = new ValueWriters.FlexObjectWriter(typeName, properties)
+    |
+    |  override def write(serializer: ObjectSerializer, value: Map[UString, Any]): Unit =
+    |    writer.write(serializer, value)
+    |
+    |  override def read(deserializer: ObjectDeserializer): Map[UString, Any] =
+    |    reader.read(deserializer)
+    |}
     |
     |class Tuple1ReadWriter[T1] (
     |  typeName: UString,
@@ -121,6 +167,7 @@ object ReadWriterGenerator {
     |      propName match {
     |        case Some(field1._1) => v1 = Some(field1._2.read(deserializer))
     |        case Some(x) => throw new DeserializationError("Unrecognized field: " + x)
+    |        case _ =>
     |      }
     |      propName = deserializer.tryReadPropertyName()
     |    }
@@ -134,32 +181,6 @@ object ReadWriterGenerator {
     |ValueReadWriter[T1] =
     |  new Tuple1ReadWriter[T1](UString.of(typeName),
     |    UString.of(field1._1) -> field1._2)
-    |
-    |""".stripMargin
-
-  private val STANDARD_WRITERS = """
-    |def writerOf[T](implicit writer: ValueWriter[T]): ValueWriter[T] = writer
-    |
-    |def writerOf(typeName: UString): ValueWriter[Unit] = (d, _) =>
-    |  d.writeObjectBegin(typeName)
-    |    .writeObjectEnd()
-    |
-    |private class ValueWriter1[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit writer1: ValueWriter[T1])
-    |  extends ValueWriter[T1]
-    |{
-    |  override def write(serializer: ObjectSerializer, value: T1): Unit =
-    |    serializer.writeObjectBegin(typeName)
-    |      .writePropertyName(fieldName1).writeValue(value)(writer1)
-    |      .writeObjectEnd()
-    |}
-    |
-    |def writerOf[T1](
-    |  typeName: UString, fieldName1: UString)(
-    |  implicit writer1: ValueWriter[T1])
-    |: ValueWriter[T1] =
-    |  new ValueWriter1[T1](typeName, fieldName1)(writer1)
     |
     |""".stripMargin
 
@@ -247,6 +268,7 @@ object ReadWriterGenerator {
     .append("      propName match {\n")
     .append(list(n, "", i => s"        case Some(field$i._1) => v$i = Some(field$i._2.read(deserializer))\n"))
     .append("        case Some(x) => throw new DeserializationError(\"Unrecognized field: \" + x)\n")
+    .append("        case _ => \n")
     .append("      }\n")
     .append("      propName = deserializer.tryReadPropertyName()\n")
     .append("    }\n")
@@ -286,6 +308,7 @@ object ReadWriterGenerator {
   def writerFactory(n: Int): String = factory("writer", "ValueWriter", n)
   def readerFactory(n: Int): String = factory("reader", "ValueReader", n)
   def readWriterFactory(n: Int): String = factory("readWriter", "ValueReadWriter", n)
+  def nothing(n: Int): String = ""
 
   def generateFile(dir: File, className: String, staticCode: String, classGen: Int => String,
     factoryGen: Int => String): File =
@@ -315,21 +338,13 @@ object ReadWriterGenerator {
   def generateReadWriters(dir: File): File = generateFile(dir, "ValueReadWriters",
     STANDARD_READ_WRITERS, readWriterClass, readWriterFactory)
 
-  def _generateReadWriters(dir: File): File = {
-    val outputFile = dir / s"ValueReadWriters.scala"
-    IO.createDirectory(dir)
-    val writer = new FileWriter(outputFile)
-    writer.write("package net.kfoundation.scala.serialization\n")
-    writer.write("import net.kfoundation.scala.UString\n")
-    writer.write(s"object ValueReadWriters {\n")
-    writer.write(STANDARD_READ_WRITERS)
-    writer.write("\n")
-    2.to(N).foreach(i => writer.write(_readWriterClass(i)))
-    2.to(N).foreach(i => writer.write(_factory(i)))
-    writer.write("}")
-    writer.close()
-    println("Generated: " + outputFile)
-    outputFile
-  }
+  def _generateReaders(dir: File): File = generateFile(dir, "ValueReaders",
+    STANDARD_READERS, nothing, nothing)
+
+  def _generateWriters(dir: File): File = generateFile(dir, "ValueWriters",
+    STANDARD_WRITERS, nothing, nothing)
+
+  def _generateReadWriters(dir: File): File = generateFile(dir, "ValueReadWriters",
+    STANDARD_READ_WRITERS, _readWriterClass, _factory)
 
 }

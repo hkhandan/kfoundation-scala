@@ -21,7 +21,7 @@ object YamlObjectSerializer {
 }
 
 
-
+/** YAML object serializer */
 class YamlObjectSerializer private(writer: IndentingWriter) extends ObjectSerializer {
   import ObjectStreamStateMachine.State
   import internals.CommonSymbols._

@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.serialization
 
 import java.io.{ByteArrayOutputStream, InputStream}
@@ -14,7 +23,7 @@ import net.kfoundation.scala.serialization.internals.XmlSymbols._
 import scala.annotation.tailrec
 
 
-
+/** XML object deserializer */
 object XmlObjectDeserializer {
 
   class MetaData(val version: UString, val encoding: UString)
@@ -142,7 +151,7 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
 
   private def tryReadEscapeSequence: Option[UString] =
     if(walker.tryRead(AMP)) {
-      if(walker.tryReadAll(_ != SEMICOLON.codePoint) == 0) {
+      if(walker.readAll(_ != SEMICOLON.codePoint) == 0) {
         throw walker.lexicalErrorAtCurrentLocation("Escape sequence expected")
       }
       val unescaped = XmlEscape.unescapeOne(walker.getCurrentSelection)
@@ -164,7 +173,7 @@ class XmlObjectDeserializer private (walker: CodeWalker) extends ObjectDeseriali
     while(hasMore) {
       hasMore = false
       skipComments()
-      val nRead = walker.tryReadAll(cp => cp != AMP_CP && cp != TAG_BEGIN_CP)
+      val nRead = walker.readAll(cp => cp != AMP_CP && cp != TAG_BEGIN_CP)
       if(nRead > 0)  {
         buffer.write(walker.getCurrentSelection.toUtf8, 0, nRead)
         end = walker.commit().end

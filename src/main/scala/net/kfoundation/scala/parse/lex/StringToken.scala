@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.parse.lex
 
 import java.io.ByteArrayOutputStream
@@ -7,10 +16,19 @@ import net.kfoundation.scala.{UChar, UString}
 
 import scala.annotation.tailrec
 
+
+
 object StringToken {
   private val DOUBLE_QUOTE: UChar = '"'
   private val BACKSLASH: UChar = '\\'
 
+
+  /**
+   * Attempt to read a C-escaped string from input. Supported escape sequences
+   * are "\\" for one "\", "\n" for newline, "\r" for carriage return, "\t"
+   * for tab, and "\b" for backspace. "\\u" for unicode codepoint is planned
+   * to be supported in future.
+   */
   object reader extends TokenReader[StringToken] {
     def tryRead(w: CodeWalker): Option[StringToken] =
       if(w.tryRead(DOUBLE_QUOTE)) {
@@ -18,10 +36,10 @@ object StringToken {
         val range = w.commit()
         Some(new StringToken(range, str))
       } else {
-        w.rollback()
         None
       }
   }
+
 
   @tailrec
   private def readStringBody(w: CodeWalker, b: ByteArrayOutputStream,
@@ -57,7 +75,13 @@ object StringToken {
     case _ => throw w.lexicalErrorAtCurrentLocation(
       "Invalid escape sequence '\\" + ch + "'")
   }
+
 }
 
+
+
+/**
+ * A portion of the input that is considered as literal text.
+ */
 class StringToken(range: CodeRange, value: UString)
   extends Token[UString](range, value)

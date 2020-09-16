@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -17,6 +26,9 @@
 
 package net.kfoundation.scala.encoding
 
+/**
+ * This is Scala port of MurmurHash originally implemented in Java by Google.
+ */
 object MurmurHash3 {
 
     // Constants for 32-bit variant
@@ -37,11 +49,14 @@ object MurmurHash3 {
     private val N1: Int = 0x52dce729
     private val N2: Int = 0x38495ab5
 
+
     private def rotateLeft(i: Long, distance: Int): Long =
         (i << distance) | (i >>> -distance)
 
+
     private def rotateLeft(i: Int, distance: Int): Int =
         (i << distance) | (i >>> -distance)
+
 
     private def getLittleEndianInt(data: Array[Byte], index: Int) =
         (data(index     ) & 0xff       ) |
@@ -49,10 +64,12 @@ object MurmurHash3 {
         ((data(index + 2) & 0xff) << 16) |
         ((data(index + 3) & 0xff) << 24)
 
+
     private def mix32(k: Int, hash: Int): Int = {
         val h = hash ^ rotateLeft(k * C1_32, R1_32) * C2_32
         rotateLeft(h, R2_32) * M_32 + N_32
     }
+
 
     private def getLittleEndianLong(data: Seq[Byte], index: Int): Long =
         (data(index).toLong & 0xff) |
@@ -64,6 +81,7 @@ object MurmurHash3 {
         ((data(index + 6).toLong & 0xff) << 48) |
         ((data(index + 7).toLong & 0xff) << 56)
 
+
     private def fMix64(h: Long): Long = {
         var hash = h
         hash ^= (hash >>> 33)
@@ -73,8 +91,16 @@ object MurmurHash3 {
         hash ^ (hash >>> 33)
     }
 
+
+    /**
+     * Applies 32-bit variation of MurmurHash to the input. Seed is assumed to be 0.
+     */
     def hash32x86(data: Array[Byte]): Int = hash32x86(data, 0, data.length, 0)
 
+
+    /**
+     * Applies 32-bit variation of MurmurHash to the given part of the input with a custom seed.
+     */
     def hash32x86(data: Array[Byte], offset: Int, length: Int, seed: Int): Int = {
         var hash: Int = seed
         val nBlocks: Int = length >> 2
@@ -184,8 +210,16 @@ object MurmurHash3 {
         Array(h1, h2)
     }
 
+
+    /**
+     * Applies 128-bit variation of MurmurHash to the given input. Seed is assumed to be 0.
+     */
     def hash128x64(data: Seq[Byte]): Array[Long] = hash128x64(data, 0, data.length, 0)
 
+
+    /**
+     * Applies 128-bit variation of MurmurHash to given part of the input with a custom seed.
+     */
     def hash128x64(data: Seq[Byte], offset: Int, length: Int, seed: Int): Array[Long] =
         hash128x64Internal(data, offset, length, seed & 0xffffffffL)
 }

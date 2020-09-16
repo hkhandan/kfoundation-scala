@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.util
 
 class SimpleStack[T] {
@@ -15,7 +24,7 @@ class SimpleStack[T] {
 
   def peek(): Option[T] = items.lastOption
 
-  def getItems: List[Any] = List.from(items)
+  def getItems: List[T] = items
 
   override def toString: String = items.toString()
 }

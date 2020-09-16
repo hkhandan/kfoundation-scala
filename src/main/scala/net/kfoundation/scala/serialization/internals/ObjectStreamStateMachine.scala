@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.serialization.internals
 
 import net.kfoundation.scala.UString
@@ -8,8 +17,8 @@ import net.kfoundation.scala.util.SimpleStack
 
 object ObjectStreamStateMachine {
   private class StackItem(val isCollection: Boolean, val name: Option[UString]) {
-    override def toString: String = name.getOrElse("<no-name>") + (
-      if(isCollection) "[]" else "")
+    override def toString: String = name.map(_.toString).
+      getOrElse("<no-name>") + (if(isCollection) "[]" else "")
   }
 
   object State extends Enumeration {
@@ -17,6 +26,7 @@ object ObjectStreamStateMachine {
     COLLECTION_END, PROPERTY, LITERAL = Value
   }
 }
+
 
 
 class ObjectStreamStateMachine {

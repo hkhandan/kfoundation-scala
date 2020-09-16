@@ -1,14 +1,26 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.parse.syntax
 
 import net.kfoundation.scala.UString
 import net.kfoundation.scala.parse.lex.Token
 
 
+
 object SyntaxError {
+
   private def describe(t: Token[_]): String = {
     val kind = t.getClass.getSimpleName.replace("Token", "").toLowerCase
     kind + " '" + t.value + "'"
   }
+
 
   def expected(file: String, lastToken: Option[Token[_]],
     thisToken: Option[Token[_]], expectation: UString): SyntaxError =
@@ -25,7 +37,10 @@ object SyntaxError {
 
     new SyntaxError(s"$l: $expectation expected$after but $found found")
   }
+
 }
+
+
 
 class SyntaxError(message: String, cause: Throwable)
   extends Exception(message, cause)

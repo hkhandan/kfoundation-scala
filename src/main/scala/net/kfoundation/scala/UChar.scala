@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala
 
 import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
@@ -8,7 +17,12 @@ import scala.annotation.tailrec
 import scala.language.implicitConversions
 
 
+
 object UChar {
+
+  /**
+   * Encodes input codepoints to UTF-8 and writes them to output.
+   */
   trait Utf8Writer {
     private val buffer = new Array[Byte](6)
 
@@ -20,6 +34,11 @@ object UChar {
     protected def writeBytes(bytes: Array[Byte], count: Int): Unit
   }
 
+
+  /**
+   * Writes UTF-8 encoded codepoints to the buffer allocated by the given
+   * array.
+   */
   class ArrayUtf8Writer(private val a: Array[Byte], private var offset: Int)
     extends Utf8Writer
   {
@@ -33,11 +52,20 @@ object UChar {
     def getOffset: Int = offset
   }
 
+
+  /**
+   * Writes UTF-8 encoded codepoints to the given OutputStream.
+   */
   class StreamUtf8Writer(private val s: OutputStream) extends Utf8Writer {
     override protected def writeBytes(bytes: Array[Byte], count: Int): Unit =
       s.write(bytes, 0, count)
   }
 
+
+  /**
+   * Writes UTF-8 encoded codepoints to an expansible internal buffer. The
+   * data written can be obtained by calling the get() method.
+   */
   class BufferUtf8Writer private (private val s: ByteArrayOutputStream)
     extends StreamUtf8Writer(s)
   {
@@ -45,6 +73,10 @@ object UChar {
     def get: Array[Byte] = s.toByteArray
   }
 
+
+  /**
+   * Internally encodes and stores last and only last codepoint in UTF-8.
+   */
   class SingleUtf8Writer() extends Utf8Writer {
     private var value: Array[Byte] = _
     override def writeBytes(octets: Array[Byte], count: Int): Unit =
@@ -52,6 +84,10 @@ object UChar {
     def get: Array[Byte] = value
   }
 
+
+  /**
+   * Reads UTF-8 encoded data into codepoints or UChar objects.
+   */
   trait Utf8Reader {
     private val buffer = new Array[Byte](6)
     private var delta = 0
@@ -102,6 +138,10 @@ object UChar {
     }
   }
 
+
+  /**
+   * Reads the given UTF-8 encoded array of bytes by its codepoints.
+   */
   class ByteArrayUtf8Reader(private val octets: Array[Byte])
     extends Utf8Reader
   {
@@ -127,11 +167,16 @@ object UChar {
     def hasMore: Boolean = pos < octets.length
   }
 
+
+  /**
+   * Reads the given UTF-8 encoded InputStream by its codepoints.
+   */
   class StreamUtf8Reader(private val stream: InputStream) extends Utf8Reader {
     override def nextOctet: Int = stream.read()
     def mark(len: Int): Unit = stream.mark(len)
     def reset(): Unit = stream.reset()
   }
+
 
   private val NXT : Int = 0x80
   private val SEQ2: Int = 0xc0
@@ -139,6 +184,7 @@ object UChar {
   private val SEQ4: Int = 0xf0
   private val SEQ5: Int = 0xf8
   private val SEQ6: Int = 0xfc
+
 
   private def write(codePoint: Int, n: Int, buffer: Array[Byte]): Unit = {
     val oc = decompose(codePoint)
@@ -173,11 +219,13 @@ object UChar {
     }
   }
 
+
   private def write(codePoint: Int, buffer: Array[Byte]): Int = {
     val n = getUtf8SizeWithCodePoint(codePoint)
     write(codePoint, n, buffer)
     n
   }
+
 
   private def decompose(input: Int): Array[Int] = Array(
     input.toByte & 0xFF,
@@ -226,6 +274,10 @@ object UChar {
       6
     }
 
+
+  /**
+   * Encodes the given codepoint to UTF-8.
+   */
   def encodeUtf8(ch: Int): Array[Byte] = {
     val n = getUtf8SizeWithCodePoint(ch)
     val octets = new Array[Byte](n)
@@ -233,8 +285,13 @@ object UChar {
     octets
   }
 
+
+  /**
+   * Writes the UTF-8 encoded value of given codepoint to the give OutputStream.
+   */
   def encodeUtf8(ch: Int, output: OutputStream): Unit =
     output.write(encodeUtf8(ch))
+
 
   private def getHighOctet(first: Byte, n: Int): Byte = (n match {
     case 1 => first
@@ -245,56 +302,205 @@ object UChar {
     case 6 => first & 0x01
   }).toByte
 
+
+  /**
+   * Converts the corresponding codepoint for the given UTF-8 encoded character.
+   */
   def decodeUtf8(input: Array[Byte]): Int =
     new ByteArrayUtf8Reader(input).nextCodePoint
 
+
+  /**
+   * Converts the given codepoint to UTF-16 (Java native encoding).
+   */
   def encodeUtf16(codePoint: Int): Array[Char] = Character.toChars(codePoint)
 
+
+  /**
+   * Tests if the given codepoint is a lower-case alphabetic character.
+   */
   def isLowerCase(ch: Int): Boolean = Character.isLowerCase(ch)
+
+
+  /**
+   * Tests if the given codepoint is a upper-case alphabetic character.
+   */
   def isUpperCase(ch: Int): Boolean = Character.isUpperCase(ch)
+
+
+  /**
+   * Tests if the given codepoint is a numeric character.
+   */
   def isNumeric(ch: Int): Boolean = Character.isDigit(ch)
+
+
+  /**
+   * Tests if the given codepoint is an alphabetic character
+   */
   def isAlphabet(ch: Int): Boolean = Character.isAlphabetic(ch)
+
+
+  /**
+   * Tests if the given codepoint is alphanumeric.
+   */
   def isAlphanumeric(ch: Int): Boolean = Character.isLetterOrDigit(ch)
+
+
+  /**
+   * Tests if the given codepoint is a white space.
+   */
   def isWhiteSpace(ch: Int): Boolean = Character.isWhitespace(ch)
+
+
+  /**
+   * Returns the codepoint corresponding to the lower-case counterpart of the
+   * given codepoint.
+   */
   def toLowerCase(ch: Int): Int = Character.toLowerCase(ch)
+
+
+  /**
+   * Returns the codepoint corresponding to the upper-case counterpart of the
+   * given codepoint.
+   */
   def toUpperCase(ch: Int): Int = Character.toUpperCase(ch)
 
+
+  /**
+   * Creates a UChar from the given raw UTF-8 encoded character.
+   * @param utf8
+   * @return
+   */
   def valueOfUtf8(utf8: Array[Byte]) = new UChar(decodeUtf8(utf8))
+
+
   def valueOfUtf16(w1: Char, w2: Char) = new UChar(Character.toCodePoint(w1, w2))
 
+
+  /**
+   * Converts a native character to UChar
+   */
   implicit def of(ch: Char): UChar = new UChar(ch)
+
 }
 
 
+
+/**
+ * Represents a Unicode character. Internally, it maintains both codepoint
+ * and UTF-8 representations. Conversion from native Char to UChar is
+ * provided implicitly.
+ *
+ * <pre>
+ * val ch: UChar = 'c'
+ * </pre>
+ */
 class UChar private (val codePoint: Int, private val utf8: Array[Byte]) {
   import UChar._
 
+  /**
+   * Constructs a new UChar from codepoint representation.
+   */
   def this(codePoint: Int) = this(codePoint, UChar.encodeUtf8(codePoint))
 
+
+  /**
+   * Constructs a new UChar from way UTF-8 representation.
+   */
   def this(utf8: Array[Byte]) = this(
     UChar.decodeUtf8(utf8),
     utf8.clone())
 
+
+  /**
+   * Tests of this character is lowercase.
+   */
   def isLowerCase: Boolean = Character.isLowerCase(codePoint)
+
+
+  /**
+   * Tests if this character is uppercase.
+   */
   def isUpperCase: Boolean = Character.isUpperCase(codePoint)
+
+
+  /**
+   * Tests if this character is numeric.
+   */
   def isNumeric: Boolean = Character.isDigit(codePoint)
+
+
+  /**
+   * Tests if this character is alphabetic.
+   */
   def isAlphabet: Boolean = Character.isAlphabetic(codePoint)
+
+
+  /**
+   * Tests if this character is alphanumeric.
+   */
   def isAlphanumeric: Boolean = Character.isLetterOrDigit(codePoint)
+
+
+  /**
+   * Tests if this character is a white space.
+   */
   def isWhiteSpace: Boolean = Character.isWhitespace(codePoint)
+
+
+  /**
+   * Converts this character to lowercase.
+   */
   def toLowerCase: UChar = new UChar(Character.toLowerCase(codePoint))
+
+
+  /**
+   * Converts this character to uppercase.
+   */
   def toUpperCase: UChar = new UChar(Character.toUpperCase(codePoint))
 
+
+  /**
+   * Returns the number of bytes used for UTF-8 representation of this
+   * character.
+   */
   def getUtf8Length: Int = utf8.length
+
+
+  /**
+   * Returns UTF-8 representation of this character.
+   */
   def toUtf8: Array[Byte] = utf8
+
+
+  /**
+   * Computes and returns UTF-16 representation of this character.
+   */
   def toUtf16: Array[Char] = encodeUtf16(codePoint)
+
+
+  /**
+   * Writes this character to the given output stream in UTF-8.
+   */
   def writeToStream(os: OutputStream): Unit = os.write(utf8)
+
+
+  /**
+   * Appends this character to the given StringBuilder (after converting to
+   * native UTF-16).
+   */
   def appendTo(builder: StringBuilder): Unit = builder.appendAll(toUtf16)
 
+
   override def hashCode(): Int = MurmurHash3.hash32x86(utf8)
+
+
   override def toString: String = new String(encodeUtf16(codePoint))
+
 
   override def equals(other: Any): Boolean = other match {
     case that: UChar => codePoint == that.codePoint
     case _ => false
   }
+
 }

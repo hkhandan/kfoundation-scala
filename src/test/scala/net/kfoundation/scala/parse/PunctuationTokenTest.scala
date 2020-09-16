@@ -1,7 +1,16 @@
-package net.kfoundation
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
 
-import net.kfoundation.scala.{UChar, UString}
+package net.kfoundation.scala.parse
+
 import net.kfoundation.scala.parse.lex.{CodeWalker, PunctuationToken}
+import net.kfoundation.scala.{UChar, UString}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class PunctuationTokenTest extends AnyFlatSpec {
