@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.java.serialization;
 
 import net.kfoundation.java.UString;
@@ -6,8 +15,11 @@ import scala.jdk.javaapi.OptionConverters;
 import java.util.Optional;
 
 
-
+/**
+ * Used to port object Scala-based object deserializers to Java.
+ */
 public class WrappedScalaObjectDeserializer implements ObjectDeserializer {
+
     private final net.kfoundation.scala.serialization.ObjectDeserializer impl;
 
 
@@ -71,6 +83,7 @@ public class WrappedScalaObjectDeserializer implements ObjectDeserializer {
     @Override
     public Optional<UString> tryReadPropertyName() {
         return OptionConverters.toJava(
-                impl.tryReadPropertyName().map(UString::of));
+            impl.tryReadPropertyName().map(UString::of));
     }
+
 }

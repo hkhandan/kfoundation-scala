@@ -374,6 +374,11 @@ object UChar {
   def valueOfUtf8(utf8: Array[Byte]) = new UChar(decodeUtf8(utf8))
 
 
+  /**
+   * Decodes a UTF-16 character, producing a UChar.
+   * @param w1 UTF-16 first two bytes
+   * @param w2 UTF-16 second two bytes
+   */
   def valueOfUtf16(w1: Char, w2: Char) = new UChar(Character.toCodePoint(w1, w2))
 
 

@@ -1,3 +1,12 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.java.serialization;
 
 import net.kfoundation.java.UString;
@@ -8,6 +17,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
+/**
+ * ValueReadWriters for basic types, and factories to create one for complex
+ * types (i.e. objects).
+ */
 public class ValueReadWriters {
 
     private static class ObjectReader implements ValueReader<Map<UString, Object>> {
@@ -146,6 +159,10 @@ public class ValueReadWriters {
         }
     }
 
+
+    /**
+     * Read-writer for boolean / Boolean.
+     */
     public static ValueReadWriter<Boolean> BOOLEAN = new ValueReadWriter<>() {
         @Override
         public Boolean read(ObjectDeserializer deserializer) {
@@ -158,6 +175,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for int / Integer.
+     */
     public static ValueReadWriter<Integer> INT = new ValueReadWriter<>() {
         @Override
         public Integer read(ObjectDeserializer deserializer) {
@@ -170,6 +191,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for long / Long.
+     */
     public static ValueReadWriter<Long> LONG = new ValueReadWriter<>() {
         @Override
         public Long read(ObjectDeserializer deserializer) {
@@ -182,6 +207,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for float / Float
+     */
     public static ValueReadWriter<Float> FLOAT = new ValueReadWriter<>() {
         @Override
         public Float read(ObjectDeserializer deserializer) {
@@ -194,6 +223,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for double / Double.
+     */
     public static ValueReadWriter<Double> DOUBLE = new ValueReadWriter<>() {
         @Override
         public Double read(ObjectDeserializer deserializer) {
@@ -206,6 +239,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for UString.
+     */
     public static ValueReadWriter<UString> USTRING = new ValueReadWriter<>() {
         @Override
         public UString read(ObjectDeserializer deserializer) {
@@ -218,6 +255,10 @@ public class ValueReadWriters {
         }
     };
 
+
+    /**
+     * Read-writer for String.
+     */
     public static ValueReadWriter<String> STRING = new ValueReadWriter<>() {
         @Override
         public String read(ObjectDeserializer deserializer) {
@@ -258,17 +299,20 @@ public class ValueReadWriters {
         return Optional.empty();
     }
 
+
     private static Map<Parameter, ValueReader<?>> getCreatorDefinedFields(Constructor<?> c) {
         return Stream.of(c.getParameters()).collect(Collectors.toMap(
             p -> p,
             p -> getReader(p.getType())));
     }
 
+
     private static Map<Field, ValueReader<?>> getObjectDefinedFields(Class<?> cls) {
         return Stream.of(cls.getFields()).collect(Collectors.toMap(
             p -> p,
             p -> getReader(p.getType())));
     }
+
 
     private static String getPropertyName(Parameter p) {
         SerializedName n = p.getAnnotation(SerializedName.class);
@@ -278,6 +322,7 @@ public class ValueReadWriters {
         return p.getName();
     }
 
+
     private static String getPropertyName(Field f) {
         SerializedName n = f.getAnnotation(SerializedName.class);
         if(n != null) {
@@ -286,6 +331,7 @@ public class ValueReadWriters {
         return f.getName();
     }
 
+
     private static String getTypeName(Class<?> cls) {
         SerializedName n = cls.getAnnotation(SerializedName.class);
         if(n != null) {
@@ -293,6 +339,7 @@ public class ValueReadWriters {
         }
         return cls.getSimpleName();
     }
+
 
     private static ValueReader<?> getReader(Class<?> cls) {
         if(READERS.containsKey(cls)) {
@@ -321,6 +368,10 @@ public class ValueReadWriters {
         throw new DeserializationError("Could not find reader for " + cls.getCanonicalName());
     }
 
+
+    /**
+     * Produces a read-writer for the given class using reflection.
+     */
     public <T> ValueReader<T> readerOf(Class<T> cls) {
         Optional<Constructor<T>> creator =  getCreator(cls);
         if(creator.isPresent()) {
@@ -329,6 +380,7 @@ public class ValueReadWriters {
         }
         return new AutoReaderByFields<>(cls, getObjectDefinedFields(cls));
     }
+
 
     private ValueReadWriters() {}
 

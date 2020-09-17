@@ -179,13 +179,13 @@ object UString {
  * stored and read in UTF-8 encoding, and written to output with little or no
  * processing. Most often such process can be done at byte level (such as
  * concatenation), and in cases when iteration of code points is required, it
- * can be done directly over UTF-8 stream. By avoiding unnecessary encoding and
- * decoding to and from UTF-8, unlike Java'S String, we can save our CPU
- * resources. Also since UTF-8 is most compact Unicode representation, we save
+ * can be done directly over the UTF-8 stream. By avoiding unnecessary encoding and
+ * decoding to and from UTF-8, unlike Java String, we can save our CPU
+ * resources. Also since UTF-8 is the most compact Unicode representation, we save
  * some memory as well.
  *
  * Use toUtf8() to get raw bytes consisting this string, or if necessary use
- * uCharIterator() to read each character.
+ * uCharIterator() to read each character one-by-one.
  *
  * getLength() returns the length of string in characters rather than bytes. To
  * get the number of bytes use getUtf8Length(). substring() methods also

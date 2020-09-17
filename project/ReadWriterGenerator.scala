@@ -69,9 +69,12 @@ object ReadWriterGenerator {
     |{
     |  override def write(serializer: ObjectSerializer, value: Map[UString, Any]): Unit = {
     |    serializer.writeObjectBegin(typeName)
-    |    value.foreach(kv => properties.get(kv._1)
-    |      .getOrElse(throw new SerializationError("No writer provided for property \"" + kv._1 + "\" of" + typeName))
-    |      .write(serializer, kv._2))
+    |    value.foreach(kv => {
+    |      serializer.writePropertyName(kv._1)
+    |      properties.get(kv._1)
+    |        .getOrElse(throw new SerializationError("No writer provided for property \"" + kv._1 + "\" of" + typeName))
+    |        .write(serializer, kv._2)
+    |    })
     |    serializer.writeObjectEnd()
     |  }
     |}
@@ -317,7 +320,6 @@ object ReadWriterGenerator {
   def writerFactory(n: Int): String = factory("writer", "ValueWriter", n)
   def readerFactory(n: Int): String = factory("reader", "ValueReader", n)
   def readWriterFactory(n: Int): String = factory("readWriter", "ValueReadWriter", n)
-  def nothing(n: Int): String = ""
 
   def generateFile(dir: File, className: String, staticCode: String, classGen: Int => String,
     factoryGen: Int => String): File =
