@@ -1,3 +1,5 @@
+#!/usr/bin/env sh
+
 # --------------------------------------------------------------------------
 #   ██╗  ██╗███████╗
 #   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
@@ -7,6 +9,6 @@
 #   ╚═╝  ╚═╝╚═╝
 # --------------------------------------------------------------------------
 
-#!/usr/bin/env sh
 export GPG_TTY=$(tty)
 sbt --no-colors --supershell=false "+publishLocal" "+publishM2" "+publishSigned" "fullOptJS"
+npm publish

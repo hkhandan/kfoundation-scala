@@ -20,5 +20,5 @@ let c = C_RW.read(KF.Deserializers.K4, input)
 
 console.log(c)
 
-console.log(C_RW.write(KF.Serializers.YAML, c))
+console.log(C_RW.write(KF.Serializers.XML, c))
 

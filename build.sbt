@@ -7,8 +7,6 @@
 //   ╚═╝  ╚═╝╚═╝
 // --------------------------------------------------------------------------
 
-import com.jsuereth.sbtpgp.PgpKeys.publishSigned
-
 // --- Project Information --- //
 
 ThisBuild / name := "KFoundation-Scala"
@@ -61,27 +59,38 @@ resolvers ++= Seq(
 ThisBuild / libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test"
 
 ThisBuild / scalaVersion := latestScala
-ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value / "net" / "kfoundation" / "scala" / "serialization"
+//ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value / "net" / "kfoundation" / "scala" / "serialization"
 
-val scalaApi = crossProject(JVMPlatform, JSPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("."))
+val shared = project.in(file("shared"))
   .settings(
-    Compile / unmanagedSourceDirectories += scalaGenDirectory.value,
+    scalaGenDirectory := (Compile / sourceManaged).value / "net" / "kfoundation" / "scala" / "serialization",
+    Compile / sourceGenerators += generateReadWritersImpl,
+    publishArtifact := false)
+
+val jsApi = project.in(file("js-api"))
+  .enablePlugins(ScalaJSPlugin)
+  .dependsOn(shared)
+  .settings(
+    moduleName := "kfoundation-js",
+    (Compile / unmanagedSourceDirectories) += (shared / Compile / scalaSource).value,
+    (Compile / unmanagedSourceDirectories) ++= (shared / Compile / managedSourceDirectories).value,
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) })
 
-val kfoundation = project.in(file("."))
-  .aggregate(scalaApi.jvm, scalaApi.js)
+val scalaApi = project.in(file("scala-api"))
+  .dependsOn(shared)
   .settings(
-    Compile / sourceGenerators += generateReadWritersImpl,
-    crossScalaVersions := scalaVersions,
-    publish := {},
-    publishLocal := {},
-    publishSigned := {},
-    publishM2 := {})
+    moduleName := "kfoundation-scala",
+    (Compile / unmanagedSourceDirectories) += (shared / Compile / scalaSource).value)
 
 val javaApi = project.in(file("java-api"))
-  .dependsOn(kfoundation)
+  .dependsOn(shared)
+  .settings(
+    moduleName := "kfoundation-java",
+    crossPaths := false,
+    Compile / doc / javacOptions ++= Seq("-Xdoclint:none", "-quiet"))
+
+val kfoundation = project.in(file("."))
+  .aggregate(shared, scalaApi, javaApi, jsApi)
 
 
 

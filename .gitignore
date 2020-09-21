@@ -3,10 +3,6 @@
 # Project specific excludes
 #
 
-/js
-/jvm
-scala-gen
-
 #
 # Default excludes
 #

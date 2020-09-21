@@ -320,6 +320,7 @@ object ReadWriterGenerator {
   def writerFactory(n: Int): String = factory("writer", "ValueWriter", n)
   def readerFactory(n: Int): String = factory("reader", "ValueReader", n)
   def readWriterFactory(n: Int): String = factory("readWriter", "ValueReadWriter", n)
+  def nothing(n: Int): String = ""
 
   def generateFile(dir: File, className: String, staticCode: String, classGen: Int => String,
     factoryGen: Int => String): File =
