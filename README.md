@@ -1,6 +1,5 @@
 # KFoundation: JVM/JS Edition
 
-## About
 KFoundation is a library of essentials for modern programming needs. 
 It is designed based on the concept of universality, both in 
 technological and geographical senses. It is available on most platforms; it 
@@ -20,25 +19,20 @@ JSON, and K4 out of the box, and can be extended for more. The native
 is more extensive as it completely replaces (and does not depend on) C and C++ 
 standard libraries. 
 
+## Home Page
+Contains all resources, API documentations, dependency management, etc.
 
-
-## Installation
-
-Of course, you can always clone, change, and build this repository. But, for
-your convenience, precompiled code is made available through Maven Central and 
-npm.
-
-
-### Scala (sbt)
-
-### Scala.js (sbt)
-
-### Java (Maven)
-
-### JavaScript (npm)
-
-### Clone & Build
+http://kfoundation.net/
 
 
 
-## Reference Documentation
+## Complete Tutorial Video
+Everything you need to know to get started and make the best use of this library.
+
+https://mscp.co/resouces/video/kfoundation-tutorial.html
+
+
+## Patreon Page
+If you like this project, and want to show your support.
+
+https://www.patreon.com/kfoundation
