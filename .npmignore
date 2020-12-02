@@ -1,5 +1,5 @@
 *
-!js-api/target/scala-2.13/kfoundation-js-opt.js
+!.js/target/scala-2.13/kfoundation-scala-opt.js
 !package.json
 !LICENSE
 !README.md

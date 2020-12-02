@@ -59,7 +59,7 @@ resolvers ++= Seq(
 ThisBuild / libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test"
 
 ThisBuild / scalaVersion := latestScala
-//ThisBuild / scalaGenDirectory := (Compile / sourceManaged).value / "net" / "kfoundation" / "scala" / "serialization"
+
 
 val shared = project.in(file("shared"))
   .settings(
@@ -80,7 +80,8 @@ val scalaApi = project.in(file("scala-api"))
   .dependsOn(shared)
   .settings(
     moduleName := "kfoundation-scala",
-    (Compile / unmanagedSourceDirectories) += (shared / Compile / scalaSource).value)
+    (Compile / unmanagedSourceDirectories) += (shared / Compile / scalaSource).value,
+    (Compile / unmanagedSourceDirectories) ++= (shared / Compile / managedSourceDirectories).value)
 
 val javaApi = project.in(file("java-api"))
   .dependsOn(shared)
