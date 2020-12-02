@@ -10,7 +10,7 @@
 // --- Project Information --- //
 
 ThisBuild / name := "KFoundation-Scala"
-ThisBuild / version := "0.2-SNAPSHOT"
+ThisBuild / version := "0.2.1"
 ThisBuild / homepage := Some(url("https://mscp.co/kfoundation/about.html"))
 ThisBuild / organization := "net.kfoundation"
 ThisBuild / organizationName := "KFoundation Project"
