@@ -3,6 +3,11 @@
 # Project specific excludes
 #
 
+/js
+/jvm
+scala-gen
+package-lock.json
+
 #
 # Default excludes
 #
