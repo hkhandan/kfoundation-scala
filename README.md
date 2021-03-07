@@ -33,7 +33,7 @@ http://kfoundation.net/
 ## Related Videos
 Everything you need to know to get started and make the best use of this library.
 
-* Technologies Overview: https://youtu.be/2rZhqUWhU24
+* Technologies Overview: https://mscp.co/resouces/video/uref.html
 * Universal Serialization: https://mscp.co/resouces/video/kfoundation-tutorial.html
 
 
