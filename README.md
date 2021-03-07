@@ -33,8 +33,8 @@ http://kfoundation.net/
 ## Related Videos
 Everything you need to know to get started and make the best use of this library.
 
-Technologies Review: https://youtu.be/2rZhqUWhU24
-Universal Serialization: https://mscp.co/resouces/video/kfoundation-tutorial.html
+* Technologies Overview: https://youtu.be/2rZhqUWhU24
+* Universal Serialization: https://mscp.co/resouces/video/kfoundation-tutorial.html
 
 
 ## Patreon Page
