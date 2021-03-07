@@ -1,4 +1,15 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.i18n
+
+import net.kfoundation.scala.UString
 
 import scala.collection.mutable
 
@@ -16,7 +27,7 @@ object Country {
 
   def of(code: Int): Option[Country] = allCountries.find(_.unm49 == code)
 
-  def of(code: String): Option[Country] = try {
+  def of(code: UString): Option[Country] = try {
     of(code.toInt)
   } catch {
     case _: NumberFormatException => allCountries.find(
@@ -27,7 +38,7 @@ object Country {
 
 class Country(
   unm49: Int,
-  val isoAlpha2: String,
-  val isoAlpha3: String,
+  val isoAlpha2: UString,
+  val isoAlpha3: UString,
   superRegion: Region)
 extends Region(unm49, superRegion)

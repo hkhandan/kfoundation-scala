@@ -1,54 +1,39 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.i18n
 
-import java.time.format.DateTimeFormatter
-import java.util.TimeZone
+import net.kfoundation.scala.UString
+
+import java.util.{Date, TimeZone}
+
+
 
 object Localizer {
-
-  sealed case class DateTimeStyle() {
-    object SHORT_DATE extends DateTimeStyle
-    object LONG_DATE extends DateTimeStyle
-    object SHORT_DATE_TIME extends DateTimeStyle
-    object LONG_DATE_TIME extends DateTimeStyle
-    object TIME extends DateTimeStyle
+  implicit class Interpolator(ctx: StringContext)
+    extends UString.Interpolator(ctx)
+  {
+    def l(expr: Any*)(implicit localizer: Localizer): UString =
+      localizer.apply(U(expr:_*))
   }
-
-  sealed case class NumberStyle() {
-    object PLAIN extends NumberStyle
-    object CURRENCY extends NumberStyle
-  }
-
-  class LocaleSetup(
-    val language: LanguageLike,
-    val shortDateFormatter: DateTimeFormatter,
-    val longDateFormatter: DateTimeFormatter,
-    val shortDateTimeFormatter: DateTimeFormatter,
-    val longDateTimeFormatter: DateTimeStyle,
-    val timeFormatter: DateTimeFormatter,
-    val timezone: TimeZone,
-    val plainNumberFormatter: NumberStyle,
-    val currencyFormatter: NumberStyle
-  )
-
-  val DEFAULT = new Localizer(null, null)
-
-  def l(key: String, args: Any*): String = DEFAULT.l(key)
 }
 
 
-class Localizer private(
-  private val setup: Localizer.LocaleSetup,
-  private val dictionary: Dictionary)
-{
 
-    def l(key: String): String = key
-//  def l(key: String, language: LanguageLike) = ???
-//  def l(utc: Date) = ???
-//  def l(utc: Date, format: DateTimeStyle) = ???
-//  def l(utc: Date, timezone: TimeZone) = ???
-//  def l(utc: Date, timeZone: TimeZone, format: DateTimeStyle) = ???
-//  def l(number: Long) = ???
-//  def l(number: Double) = ???
-//  def l(number: Double, style: NumberStyle) = ???
-
+trait Localizer {
+  def dialect: Dialect
+  def apply(key: UString): UString
+  def apply(message: LMessage): UString
+  def apply(key: UString, values: (UString, UString)*): UString
+//  def apply(utc: Date): UString
+//  def apply(utc: Date, timezone: TimeZone): UString
+//  def apply(number: Long): UString
+//  def apply(number: Double): UString
+//  def currency(number: Double): UString
 }

@@ -12,7 +12,7 @@ package net.kfoundation.scala.serialization
 import java.io.OutputStream
 
 import net.kfoundation.scala.UString
-import net.kfoundation.scala.UString.UStringInterpolation
+import net.kfoundation.scala.UString.Interpolator
 import net.kfoundation.scala.serialization.internals.{IndentingWriter, ObjectStreamStateMachine}
 
 
@@ -21,14 +21,13 @@ object JsonObjectSerializer {
   private val COLON_SPACE = U": "
   private val COMMA_SPACE = U", "
   val DEFAULT_INDENT_SIZE = 2
-
+  val MIME_TYPE: UString = "application/json"
 
   val FACTORY: ObjectSerializerFactory = new ObjectSerializerFactory {
     override def of(output: OutputStream, indentSize: Int, compact: Boolean): ObjectSerializer =
       new JsonObjectSerializer(new IndentingWriter(output, indentSize, compact))
 
-    override def of(output: OutputStream): ObjectSerializer =
-      of(output, DEFAULT_INDENT_SIZE, false)
+    override def getMediaType: UString = MIME_TYPE
   }
 }
 

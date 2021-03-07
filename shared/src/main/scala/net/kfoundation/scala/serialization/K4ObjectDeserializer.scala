@@ -9,31 +9,25 @@
 
 package net.kfoundation.scala.serialization
 
-import java.io.InputStream
-
 import net.kfoundation.scala.io.Path
 import net.kfoundation.scala.parse.CodeLocation
 import net.kfoundation.scala.parse.lex._
-import net.kfoundation.scala.parse.syntax.SyntaxError
-import net.kfoundation.scala.serialization.K4ObjectDeserializer._
-import net.kfoundation.scala.util.SimpleStack
+import net.kfoundation.scala.serialization.internals.ObjectStreamStateMachine
 import net.kfoundation.scala.{UChar, UString}
+
+import java.io.InputStream
 
 
 
 /**  */
 object K4ObjectDeserializer {
-  private val COLLECTION_STACK_SYMBOL: UString = "*"
+  val MIME_TYPE: UString = "application/x-k4"
 
   val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
-    override def of(str: UString): ObjectDeserializer =
-      new K4ObjectDeserializer(CodeWalker.of(str))
-
     override def of(input: InputStream): ObjectDeserializer =
       new K4ObjectDeserializer(CodeWalker.of(input))
 
-    override def of(path: Path): ObjectDeserializer
-    = new K4ObjectDeserializer(CodeWalker.of(path))
+    override def getMediaType: UString = MIME_TYPE
   }
 }
 
@@ -43,12 +37,9 @@ object K4ObjectDeserializer {
 class K4ObjectDeserializer private (walker: CodeWalker)
   extends ObjectDeserializer
 {
-  import internals.ObjectStreamStateMachine.State
   import internals.CommonSymbols._
 
-  private val stack = new SimpleStack[UString]
-  private var state = State.STREAM_BEGIN
-
+  private val stateMachine = new ObjectStreamStateMachine
 
   private def readOrError(symbol: UChar): Unit = {
     if(!walker.tryRead(symbol)) {
@@ -57,31 +48,14 @@ class K4ObjectDeserializer private (walker: CodeWalker)
     }
   }
 
-
-  private def validateTransition(s: State.Value): Unit = {
-    import State._
-
-    val isAllowed: Boolean = state match {
-      case STREAM_BEGIN => s == OBJECT_BEGIN
-      case STREAM_END => false
-      case OBJECT_BEGIN => s == PROPERTY || s == OBJECT_END
-      case OBJECT_END => s == PROPERTY || s == OBJECT_END || s == COLLECTION_END
-      case COLLECTION_BEGIN => s == OBJECT_BEGIN || s == COLLECTION_END
-      case COLLECTION_END => s == PROPERTY || s == OBJECT_END
-      case PROPERTY => s == LITERAL || s == OBJECT_BEGIN || s == COLLECTION_BEGIN
-      case LITERAL => s == PROPERTY || s == OBJECT_END
-    }
-
-    if(!isAllowed) {
-      throw new DeserializationError(s"Invalid attempt to transition from $state to $s")
-    }
-
-    state = s
-  }
-
-
   override def readObjectBegin(): Option[UString] = {
-    validateTransition(State.OBJECT_BEGIN)
+    if(stateMachine.isInCollection && !stateMachine.isFirst) {
+      walker.skipSpaces()
+      if(!walker.tryRead(COMMA)) {
+        throw walker.lexicalErrorAtCurrentLocation("',' expected")
+      }
+    }
+
     walker.skipSpaces()
 
     val token = IdentifierToken.reader
@@ -91,33 +65,24 @@ class K4ObjectDeserializer private (walker: CodeWalker)
 
     walker.readSpaces()
     readOrError(OPEN_BRACE)
-    stack.push(token.value)
+    stateMachine.objectBegin(token.value)
     Some(token.value)
   }
 
 
   override def readObjectEnd(): Option[UString] = {
-    validateTransition(State.OBJECT_END)
     walker.skipSpaces()
     readOrError(CLOSE_BRACE)
-    val name = stack.pop()
-
-    if(name.isEmpty || name.get.equals(COLLECTION_STACK_SYMBOL)) {
-      throw new SyntaxError("End object token at "
-        + walker.getCurrentLocation.getLocationTag
-        + " does not correspond to the beginning of any object.")
-    }
-
+    val name = stateMachine.objectEnd()
     walker.commit()
     name
   }
 
 
   override def readCollectionBegin(): Unit = {
-    validateTransition(State.COLLECTION_BEGIN)
     walker.skipSpaces()
     readOrError(OPEN_CURLY_BRACE)
-    stack.push(COLLECTION_STACK_SYMBOL)
+    stateMachine.collectionBegin()
     walker.commit()
   }
 
@@ -127,15 +92,7 @@ class K4ObjectDeserializer private (walker: CodeWalker)
     if(!walker.tryRead(CLOSE_CURLY_BRACE)) {
       false
     } else {
-      validateTransition(State.COLLECTION_END)
-
-      val stackTail = stack.pop()
-
-      if(stackTail.isEmpty || !stackTail.get.equals(COLLECTION_STACK_SYMBOL)) {
-        throw new SyntaxError("End collection token at"
-          + walker.getCurrentLocation
-          + " does not correspond to any object.")
-      }
+      stateMachine.collectionEnd()
       true
     }
   }
@@ -147,14 +104,14 @@ class K4ObjectDeserializer private (walker: CodeWalker)
     IdentifierToken.reader.tryRead(walker).map(id => {
       walker.readSpaces()
       readOrError(EQUAL)
-      validateTransition(State.PROPERTY)
+      stateMachine.property()
       id.value
     })
   }
 
 
   override def readStringLiteral(): UString = {
-    validateTransition(State.LITERAL)
+    stateMachine.literal()
     walker.skipSpaces()
     StringToken.reader
       .tryRead(walker)
@@ -164,7 +121,7 @@ class K4ObjectDeserializer private (walker: CodeWalker)
 
 
   override def readIntegerLiteral(): Long = {
-    validateTransition(State.LITERAL)
+    stateMachine.literal()
     walker.skipSpaces()
     NumericToken.reader.tryRead(walker) match {
       case Some(i: IntegralToken) => i.value
@@ -176,7 +133,7 @@ class K4ObjectDeserializer private (walker: CodeWalker)
 
 
   override def readDecimalLiteral(): Double = {
-    validateTransition(State.LITERAL)
+    stateMachine.literal()
     walker.skipSpaces()
     NumericToken.reader.tryRead(walker) match {
       case Some(i: IntegralToken) => i.asDecimalToken.value
@@ -187,7 +144,7 @@ class K4ObjectDeserializer private (walker: CodeWalker)
 
 
   override def readBooleanLiteral(): Boolean = {
-    validateTransition(State.LITERAL)
+    stateMachine.literal()
     walker.skipSpaces()
     if(walker.tryRead(TRUE)) {
       true

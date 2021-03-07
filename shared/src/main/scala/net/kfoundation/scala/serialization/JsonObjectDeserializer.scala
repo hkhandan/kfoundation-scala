@@ -19,18 +19,14 @@ import net.kfoundation.scala.serialization.internals.ObjectStreamStateMachine
 
 
 object JsonObjectDeserializer {
+  val MIME_TYPE: UString = "application/json"
 
   val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
-    override def of(str: UString): ObjectDeserializer =
-      new JsonObjectDeserializer(CodeWalker.of(str))
-
     override def of(input: InputStream): ObjectDeserializer =
       new JsonObjectDeserializer(CodeWalker.of(input))
 
-    override def of(path: Path): ObjectDeserializer
-    = new JsonObjectDeserializer(CodeWalker.of(path))
+    override def getMediaType: UString = MIME_TYPE
   }
-
 }
 
 
@@ -99,7 +95,7 @@ class JsonObjectDeserializer private(walker: CodeWalker) extends ObjectDeseriali
       None
     } else {
       walker.skipSpaces()
-      IdentifierToken.reader.tryRead(walker).map(token => {
+      StringToken.reader.tryRead(walker).map(token => {
         if(!walker.tryRead(COLON)) {
           throw walker.lexicalErrorAtBeginning("':' expected")
         }

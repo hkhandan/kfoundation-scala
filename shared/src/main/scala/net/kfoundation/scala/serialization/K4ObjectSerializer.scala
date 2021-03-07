@@ -18,14 +18,14 @@ import net.kfoundation.scala.serialization.internals.{IndentingWriter, ObjectStr
 
 object K4ObjectSerializer {
   val DEFAULT_INDENT_SIZE = 2
+  val MIME_TYPE: UString = "application/x-k4"
 
   val FACTORY: ObjectSerializerFactory = new ObjectSerializerFactory {
     override def of(output: OutputStream, indentSize: Int, compact: Boolean):
     ObjectSerializer =
       new K4ObjectSerializer(new IndentingWriter(output, indentSize, compact))
 
-    override def of(output: OutputStream): ObjectSerializer =
-      of(output, DEFAULT_INDENT_SIZE, false)
+    override def getMediaType: UString = MIME_TYPE
   }
 }
 
@@ -95,6 +95,9 @@ class K4ObjectSerializer private(writer: IndentingWriter)  extends ObjectSeriali
 
   override def writeObjectBegin(name: UString): ObjectSerializer = {
     if(stateMachine.isInCollection) {
+      if(!stateMachine.isFirst) {
+        writer.write(COMMA)
+      }
       writer.writeNewLine()
     }
 

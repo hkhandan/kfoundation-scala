@@ -15,10 +15,11 @@ object Loop {
   def apply(b: Int, fn: Int => Unit): Unit = apply(0, b, fn)
 
   def apply(a: Int, b: Int, fn: Int => Unit): Unit = {
+    val step = if(a > b) -1 else 1
     var i = a
     while(i < b) {
       fn(i)
-      i += 1
+      i += step
     }
   }
 

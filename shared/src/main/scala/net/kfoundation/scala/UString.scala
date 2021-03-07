@@ -9,13 +9,13 @@
 
 package net.kfoundation.scala
 
-import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
-import java.nio.charset.StandardCharsets
-
 import net.kfoundation.scala.UChar._
-import net.kfoundation.scala.UString.{CR, PIPE}
+import net.kfoundation.scala.UString.{CR, NOT_FOUND, PIPE, builder}
 import net.kfoundation.scala.encoding.{DecodingException, MurmurHash3}
 
+import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
 import scala.language.implicitConversions
 
@@ -52,19 +52,203 @@ object UString {
   }
 
 
+  /** High-performance buffered builder for UStrings */
+  class Builder {
+    private val buffer = new ByteArrayOutputStream()
+
+    /** Appends a UString to the buffer. */
+    def append(str: UString): Builder = {
+      buffer.write(str.toUtf8)
+      this
+    }
+
+    /** Appends a String to the buffer. */
+    def append(str: String): Builder = append(UString.of(str))
+
+    /** Appends an Int to the buffer. */
+    def append(n: Int): Builder = append(UString.of(n))
+
+    /** Appends a Long to the buffer. */
+    def append(n: Long): Builder = append(UString.of(n))
+
+    /** Appends a Double to the buffer. */
+    def append(n: Double): Builder = append(UString.of(n))
+
+    /**
+     * Replaces all occurances of `ch` in `str` with `replacement` and
+     * appends the result to the buffer.
+     */
+    def appendReplacing(str: UString, ch: UChar, replacement: UString): Builder = {
+      str.uCharIterator.foreach(c =>
+        if(c.equals(ch)) append(replacement)
+        else append(c))
+      this
+    }
+
+    /** Appends a Char to the buffer. */
+    def append(ch: Char): Builder = {
+      buffer.write(UChar.encodeUtf8(ch))
+      this
+    }
+
+    /** Appends a UChar to the buffer. */
+    def append(ch: UChar): Builder = {
+      buffer.write(ch.toUtf8)
+      this
+    }
+
+    /** Appends a UObject to the buffer. */
+    def append(obj: UObject): Builder = {
+      obj.appendTo(this)
+      this
+    }
+
+    private def digitToHex(b: Int): Int = if(b < 10) b + 48 else b + 55
+
+    private def appendHexByte(b: Int): Unit = {
+      append(digitToHex((b >> 4) & 0xF).toChar)
+      append(digitToHex(b & 0xF).toChar)
+    }
+
+    /**
+     * Appends the hexadecimal representation of the given byte array to the
+     * buffer.
+     */
+    def appendHex(bytes: Array[Byte]): Builder = {
+      bytes.foreach(appendHexByte(_))
+      this
+    }
+
+    /**
+     * Appends the hexadecimal representation of the given byte to the buffer.
+     */
+    def appendHex(n: Byte): Builder = {
+      appendHexByte(n)
+      this
+    }
+
+    /**
+     * Appends the hexadecimal representation of the given number to the buffer.
+     */
+    def appendHex(n: Long): Builder = {
+      val buffer = ByteBuffer.allocate(8)
+      buffer.putLong(n)
+      appendHex(buffer.array())
+    }
+
+    private def appendJoining(items: Iterable[UObject], delimiter: Array[Byte]): Builder = {
+      val it = items.iterator
+      while(it.hasNext) {
+        it.next().appendTo(this)
+        if(it.hasNext) {
+          buffer.write(delimiter)
+        }
+      }
+      this
+    }
+
+    /**
+     * Appends all given items to the buffer, joining them using the given
+     * delimiter.
+     */
+    def appendJoining(items: Iterable[UObject], delimiter: UChar): Builder =
+      appendJoining(items, delimiter.toUtf8)
+
+    /**
+     * Appends all given items to the buffer, joining them using the given
+     * delimiter.
+     */
+    def appendJoining(items: Iterable[UObject], delimiter: UString): Builder =
+      appendJoining(items, delimiter.toUtf8)
+
+    /**
+     * Appends all the given items to the buffer. For items that are not
+     * UObject, their toString() method will be used.
+     */
+    def appendAll(items: Any*): Builder = {
+      items.foreach(_ match {
+        case str: UString => append(str)
+        case obj: UObject => obj.appendTo(this)
+        case ch: Char => append(ch)
+        case any => append(any.toString)
+      })
+      this
+    }
+
+    /**
+     * Iterates the given items and calls `fn` for each element to let the
+     * user code interpret and append that item to the buffer, while
+     * putting the given delimiter in between.
+     */
+    def unfold[T](items: Seq[T], delimiter: UString,
+      fn: (Builder, T) => ()): Builder =
+    {
+      val it = items.iterator
+      while(it.hasNext) {
+        fn(this, it.next())
+        if(it.hasNext) {
+          buffer.write(delimiter.toUtf8)
+        }
+      }
+      this
+    }
+
+    /** Convenience method for fluent notation.  */
+    def use(fn: Builder => Unit): Builder = {
+      fn(this)
+      this
+    }
+
+    /** Returns the internal buffer as an UString. */
+    def build: UString = new UString(buffer.toByteArray)
+
+    /** The size of the string currently held in the buffer. */
+    def size: Int = buffer.size()
+  }
+
+
   /**
    * Provides U"..." notation for creating UStrings.
    */
-  implicit class UStringInterpolation(ctx: StringContext) {
-    object U {
-      def apply(expr: Any*): UString = new UString(ctx.s(expr:_*))
+  implicit class Interpolator(ctx: StringContext) {
+    def U(expr: Any*): UString = {
+      val builder = new Builder
+      val partsIt = ctx.parts.iterator
+      val exprIt = expr.iterator
+      while(exprIt.hasNext) {
+        builder.append(partsIt.next())
+        exprIt.next() match {
+          case u: UObject => u.appendTo(builder)
+          case ch: Char => builder.append(ch)
+          case any => builder.append(any.toString)
+        }
+      }
+      builder.append(partsIt.next()).build
     }
+  }
+
+
+  implicit class IntWrapper(value: Int) {
+    def toUString: UString = of(value)
+  }
+
+
+  implicit class LongWrapper(value: Long) {
+    def toUString: UString = of(value)
+  }
+
+
+  implicit class DoubleWrapper(value: Double) {
+    def toUString: UString = of(value)
   }
 
 
   private val NULL = new UString("null")
   private val PIPE: Byte = '|'
   private val CR: Byte = '\n'
+
+  /** Returned by find() method on failure */
+  val NOT_FOUND: Int = -1
 
   /** Empty UString */
   val EMPTY: UString = new UString(Array.empty[Byte])
@@ -93,6 +277,9 @@ object UString {
   }
 
 
+  implicit def of(str: UString): String = str.toString
+
+
   /**
    * Converts a native string to UString.
    */
@@ -102,7 +289,7 @@ object UString {
   /**
    * Converts a UChar to UString.
    */
-  def of(ch: UChar): UString = new UString(ch.toUtf8)
+  def of(ch: UChar): UString = ch.toUString
 
 
   /**
@@ -139,24 +326,53 @@ object UString {
   def of(n: Double): UString = of(n.toString)
 
 
-  /**
-   * Produces a UString joining the given array UStrings, putting the given
-   * delimiter in between them.
-   */
-  def join(seq: Seq[UString], delimiter: UString): UString = {
+  /** Produces the hexadecimal representation of the given byte array. */
+  def ofHex(bytes: Array[Byte]): UString =
+    builder.appendHex(bytes).build
+
+
+  /** Produces the hexadecimal representation of the given number. */
+  def ofHex(n: Long): UString = builder.appendHex(n).build
+
+
+  private def join(objSeq: Iterable[UObject], delimiter: Array[Byte]): UString = {
+    val seq = objSeq.map(_.toUString)
     val size = seq.foldLeft(0)((a, b) => a + b.getUtf8Length) +
-      delimiter.getUtf8Length*Math.max(seq.length-1, 0)
+      delimiter.length*Math.max(seq.size-1, 0)
     val output = new ByteArrayOutputStream(size)
     val it = seq.iterator
     while(it.hasNext) {
       output.write(it.next().getOctets)
       if(it.hasNext) {
-        output.write(delimiter.getOctets)
+        output.write(delimiter)
       }
     }
     new UString(output.toByteArray)
   }
 
+
+  /**
+   * Produces a UString joining the given array UStrings, putting the given
+   * delimiter in between them.
+   */
+  def join(parts: Iterable[UObject], delimiter: UString): UString =
+    join(parts, delimiter.toUtf8)
+
+
+  /**
+   * Joins the given list of objects into a UString with putting the given
+   * delimiter in between them.
+   */
+  def join(parts: Iterable[UObject], delimiter: UChar): UString =
+    join(parts, delimiter.toUtf8)
+
+
+  /** Joins the given objects into a UString. */
+  def join(parts: UObject*): UString = join(parts, Array.emptyByteArray)
+
+
+  /** Create a new Builder instance. */
+  def builder: Builder = new Builder
 }
 
 
@@ -193,8 +409,8 @@ object UString {
  *
  * @constructor creates a UString from a UTF-8 encoded raw array of bytes.
  */
-class UString private(octets: Array[Byte]) {
-  private var length: Integer = null
+class UString private(octets: Array[Byte]) extends UObject {
+  private var length: Integer = _
 
 
   /** Creates a UString from a native String */
@@ -202,7 +418,7 @@ class UString private(octets: Array[Byte]) {
     nativeString.getBytes(StandardCharsets.UTF_8))
 
 
-  private def getOctets = octets
+  private def getOctets: Array[Byte] = octets
 
 
   private def codePointIterator: Iterator[Int] =
@@ -221,7 +437,7 @@ class UString private(octets: Array[Byte]) {
   @tailrec
   private def find(target: Seq[Byte], offset: Int, i: Int, cp: Int): Int =
     if(offset >= octets.length) {
-      -1
+      NOT_FOUND
     } else if(offset + i >= octets.length) {
       find(target, offset + 1, 0, cp + codePointInc(offset))
     } else if(i == target.length) {
@@ -360,9 +576,15 @@ class UString private(octets: Array[Byte]) {
   def find(str: UString, offset: Int): Int = find(str.getOctets, offset)
 
 
+  def contains(char: UChar): Boolean = find(char, 0) != NOT_FOUND
+
+
+  def contains(str: UString): Boolean = find(str, 0) != NOT_FOUND
+
+
   /**
    * Uses the given mapping function to convert characters of this string, and
-   * returns the resuling string.
+   * returns the resulting string.
    */
   def mapCodePoints(fn: Int => Int): UString = new UString(
     codePointIterator.map(fn)
@@ -397,6 +619,14 @@ class UString private(octets: Array[Byte]) {
   }
 
 
+  private def subSequence(begin: Int, end: Int): UString = {
+    val size = end - begin
+    val result = new Array[Byte](size)
+    Array.copy(octets, begin, result, 0, size)
+    new UString(result)
+  }
+
+
   /**
    * Creates a copy of the portion of this string starting (inclusive) and
    * ending (exclusive) at the given values.
@@ -404,10 +634,7 @@ class UString private(octets: Array[Byte]) {
   def subString(begin: Int, end: Int): UString = {
     val l1 = locationOfCodePointAtIndex(0, 0, begin)
     val l2 = locationOfCodePointAtIndex(l1, begin, end)
-    val size = l2 - l1
-    val result = new Array[Byte](size)
-    Array.copy(octets, l1, result, 0, size)
-    new UString(result)
+    subSequence(l1, l2)
   }
 
 
@@ -417,10 +644,7 @@ class UString private(octets: Array[Byte]) {
    */
   def subString(begin: Int): UString = {
     val l = locationOfCodePointAtIndex(0, 0, begin)
-    val size = octets.length - l
-    val result = new Array[Byte](size)
-    Array.copy(octets, l, result, 0, size)
-    new UString(result)
+    subSequence(l, octets.length)
   }
 
 
@@ -463,10 +687,19 @@ class UString private(octets: Array[Byte]) {
     if(o == null) UString.NULL else new UString(o.toString))
 
 
+  def toInt: Int = toString.toInt
+
+
+  def toInt(radix: Int): Int = Integer.parseInt(toString, radix)
+
+
   /**
    * Parses this string to a Long
    */
   def toLong: Long =  toString.toLong
+
+
+  def toLong(radix: Int): Long = java.lang.Long.parseLong(toString, radix)
 
 
   /**
@@ -499,6 +732,24 @@ class UString private(octets: Array[Byte]) {
   }
 
 
+  @tailrec
+  private def split(ch: UChar, offset: Int, s: Seq[UString]): Seq[UString] = {
+    val pos = find(ch, offset)
+    if(pos == NOT_FOUND) {
+      s.:+(subSequence(offset, octets.length))
+    } else {
+      split(ch, pos + ch.getUtf8Length, s.:+(subSequence(offset, pos)))
+    }
+  }
+
+
+  def split(ch: UChar): Seq[UString] = split(ch, 0, Seq.empty)
+
+
+  def replace(ch: UChar, replacement: UString): UString =
+    builder.appendReplacing(this, ch, replacement).build
+
+
   /**
    * Converts this string to corresponding native representation.
    */
@@ -518,4 +769,9 @@ class UString private(octets: Array[Byte]) {
     case _ => false
   }
 
+
+  override def appendTo(builder: UString.Builder): Unit = builder.append(this)
+
+
+  override def toUString: UString = this
 }

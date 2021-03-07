@@ -121,7 +121,7 @@ public class UString {
      * Joins a list of UStrings putting the given delimiter in between them.
      */
     public static UString join(List<UString> strings, UString delimiter) {
-        List<net.kfoundation.scala.UString> scalaList = strings.stream()
+        List<net.kfoundation.scala.UObject> scalaList = strings.stream()
             .map(s -> s.impl)
             .collect(Collectors.toList());
 

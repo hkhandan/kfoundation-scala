@@ -14,8 +14,9 @@ import net.kfoundation.scala.parse.{CodeLocation, CodeRange}
 
 
 /** Represents an error during lexing process */
-class LexicalError(location: CodeLocation, message: UString, cause: Throwable)
-  extends Exception(s"${location.getLocationTag} $message", cause)
+class LexicalError(val location: CodeLocation, val description: UString,
+    cause: Throwable)
+  extends Exception(s"${location.getLocationTag} $description", cause)
 {
   def this(location: CodeLocation, message: String) =
     this(location, message, null)

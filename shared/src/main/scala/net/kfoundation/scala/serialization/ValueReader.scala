@@ -9,10 +9,11 @@
 
 package net.kfoundation.scala.serialization
 
-import java.io.InputStream
-
+import java.io.{BufferedInputStream, ByteArrayInputStream, InputStream}
 import net.kfoundation.scala.UString
 import net.kfoundation.scala.io.Path
+
+import scala.util.Using
 
 
 
@@ -31,7 +32,9 @@ trait ValueReader[T] {
    * produced by the given factory.
    */
   def read(factory: ObjectDeserializerFactory, str: UString): T =
-    read(factory.of(str))
+    Using(new ByteArrayInputStream(str.toUtf8))(
+      stream => read(factory.of(stream)))
+    .get
 
 
   /**
@@ -39,7 +42,18 @@ trait ValueReader[T] {
    * deserializer produced by the given factory.
    */
   def read(factory: ObjectDeserializerFactory, input: InputStream): T =
-    read(factory.of(input))
+    if(input.markSupported()) {
+      read(factory.of(input))
+    } else {
+      readBuffered(factory, input)
+    }
+
+
+  private def readBuffered(factory: ObjectDeserializerFactory, input: InputStream): T =
+    Using(
+      new BufferedInputStream(input))(
+      s => read(factory.of(s)))
+      .get
 
 
   /**
@@ -47,7 +61,10 @@ trait ValueReader[T] {
    * the deserializer produced by the given factory.
    */
   def read(factory: ObjectDeserializerFactory, path: Path): T =
-    read(factory.of(path))
+    Using(
+      path.newInputStream)(
+      stream => read(factory, stream))
+      .get
 
 
   /**
@@ -63,7 +80,7 @@ trait ValueReader[T] {
   /**
    * Maps value read by this object to a value of type S.
    */
-  def map[S](implicit conversion: T => S): ValueReader[S] =
+  def mapReader[S](implicit conversion: T => S): ValueReader[S] =
     (deserializer: ObjectDeserializer) =>
       conversion.apply(ValueReader.this.read(deserializer))
 
@@ -71,10 +88,10 @@ trait ValueReader[T] {
   /**
    * Produces a reader to read sequence of values of type T.
    */
-  def toSeqReader: ValueReader[Seq[T]] = d => {
+  def seqReader: ValueReader[Seq[T]] = d => {
     d.readCollectionBegin()
     var values = List[T]()
-    while(d.tryReadCollectionEnd()) {
+    while(!d.tryReadCollectionEnd()) {
       values = values :+ ValueReader.this.read(d)
     }
     values
@@ -85,10 +102,17 @@ trait ValueReader[T] {
    * Produces a reader to read a value of type T, with default for missing
    * value being None (rather than throwing an error).
    */
-  def toOptionReader: ValueReader[Option[T]] = new ValueReader[Option[T]] {
+  def optionReader: ValueReader[Option[T]] = new ValueReader[Option[T]] {
     override def read(deserializer: ObjectDeserializer): Option[T] =
       Some(ValueReader.this.read(deserializer))
     override def getDefaultValue: Option[T] = None
   }
+
+
+  def nullableReader: ValueReader[Option[T]] = (deserializer: ObjectDeserializer) =>
+    if (deserializer.tryReadNullLiteral())
+      None
+    else
+      Some(ValueReader.this.read(deserializer))
 
 }

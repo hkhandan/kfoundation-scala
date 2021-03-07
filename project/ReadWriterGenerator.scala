@@ -82,6 +82,11 @@ object ReadWriterGenerator {
     |""".stripMargin
 
   private val STANDARD_READ_WRITERS = """
+    |implicit val NOTHING: ValueReadWriter[Unit] = new ValueReadWriter[Unit] {
+    |  override def write(serializer: ObjectSerializer, value: Unit): Unit = {}
+    |  override def read(deserializer: ObjectDeserializer): Unit = {}
+    |}
+    |
     |implicit val INT: ValueReadWriter[Int] = new ValueReadWriter[Int] {
     |  override def write(serializer: ObjectSerializer, value: Int): Unit =
     |    serializer.writeLiteral(value)
@@ -167,18 +172,19 @@ object ReadWriterGenerator {
     |{
     |  override def write(serializer: ObjectSerializer, value: T1): Unit = {
     |    serializer.writeObjectBegin(typeName)
-    |      field1._2.write(serializer, value)
+    |    field1._2.writeProperty(serializer, field1._1, value)
     |    serializer.writeObjectEnd()
     |  }
     |
     |  override def read(deserializer: ObjectDeserializer): T1 = {
+    |    deserializer.select(Seq(field1._1))
     |    deserializer.readObjectBegin(typeName)
     |    var v1: Option[T1] = None
     |    var propName = deserializer.tryReadPropertyName()
     |    while(propName.isDefined) {
     |      propName match {
     |        case Some(field1._1) => v1 = Some(field1._2.read(deserializer))
-    |        case Some(x) => throw new DeserializationError("Unrecognized field: " + x)
+    |        case Some(x) => throw new DeserializationError("Unrecognized field: " + typeName + "." + x)
     |        case _ =>
     |      }
     |      propName = deserializer.tryReadPropertyName()
@@ -212,6 +218,7 @@ object ReadWriterGenerator {
 
   def readMethod(n: Int, prefix: String): StringBuilder = new StringBuilder()
     .append("  override def read(deserializer: ObjectDeserializer): Tuple").append(tupleTypeParam(n)).append(" = {\n")
+    .append("    deserializer.select(Seq(").append(list(n, ", ", i => s"field$i._1")).append("))\n")
     .append(list(n, "\n", i => s"    var v$i: Option[T$i] = None")).append("\n")
     .append("    deserializer.readObject(typeName, _ match {\n")
     .append(list(n, "\n", i => s"      case `fieldName$i` => v$i = Some($prefix$i.read(deserializer))")).append("\n")
@@ -273,13 +280,14 @@ object ReadWriterGenerator {
 
   def _readMethod(n: Int): String = new StringBuilder()
     .append("  override def read(deserializer: ObjectDeserializer): (").append(typeParam(n)).append(") = {\n")
+    .append("    deserializer.select(Seq(").append(list(n, ", ", i => s"field$i._1")).append("))\n")
     .append("    deserializer.readObjectBegin(typeName)\n")
     .append(list(n, "\n", i => s"    var v$i: Option[T$i] = None")).append("\n")
     .append("    var propName = deserializer.tryReadPropertyName()\n")
     .append("    while(propName.isDefined) {\n")
     .append("      propName match {\n")
     .append(list(n, "", i => s"        case Some(field$i._1) => v$i = Some(field$i._2.read(deserializer))\n"))
-    .append("        case Some(x) => throw new DeserializationError(\"Unrecognized field: \" + x)\n")
+    .append("        case Some(x) => throw new DeserializationError(\"Unrecognized field: \" + typeName + \".\" + x)\n")
     .append("        case _ => \n")
     .append("      }\n")
     .append("      propName = deserializer.tryReadPropertyName()\n")
@@ -293,7 +301,7 @@ object ReadWriterGenerator {
   def _writeMethod(n: Int): String = new StringBuilder()
     .append("  override def write(serializer: ObjectSerializer, value: (").append(typeParam(n)).append(")): Unit = {\n")
     .append("    serializer.writeObjectBegin(typeName)\n")
-    .append(list(n, "\n", i => s"    serializer.writePropertyName(field$i._1)\n    field$i._2.write(serializer, value._$i)")).append("\n")
+    .append(list(n, "\n", i => s"    field$i._2.writeProperty(serializer, field$i._1, value._$i)")).append("\n")
     .append("    serializer.writeObjectEnd()\n")
     .append("  }\n")
     .toString()

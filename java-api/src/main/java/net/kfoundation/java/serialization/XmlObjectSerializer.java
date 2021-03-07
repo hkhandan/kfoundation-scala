@@ -19,12 +19,12 @@ public class XmlObjectSerializer extends WrappedScalaObjectSerializer {
 
     public XmlObjectSerializer(OutputStream output, int indentSize) {
         super(net.kfoundation.scala.serialization.XmlObjectSerializer
-            .FACTORY().of(output, indentSize));
+            .FACTORY().of(output, indentSize, false));
     }
 
     public XmlObjectSerializer(OutputStream output) {
         super(net.kfoundation.scala.serialization.XmlObjectSerializer
-            .FACTORY().of(output));
+            .FACTORY().of(output, 2, false));
     }
 
 }

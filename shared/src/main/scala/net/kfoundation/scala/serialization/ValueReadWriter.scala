@@ -21,7 +21,7 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
    * With bi-directional mapping to and from type S provided, this
    * method produces a ValueReadWriter that can read values of type S.
    */
-  def mapRW[S](implicit toConversion: T => S, fromConversion: S => T):
+  def map[S](implicit toConversion: T => S, fromConversion: S => T):
   ValueReadWriter[S] =
     new ValueReadWriter[S] {
       override def write(serializer: ObjectSerializer, value: S): Unit =
@@ -29,6 +29,10 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
       override def read(deserializer: ObjectDeserializer): S =
         toConversion(ValueReadWriter.this.read(deserializer))
     }
+
+  @deprecated
+  def mapRW[S](implicit toConversion: T => S, fromConversion: S => T):
+  ValueReadWriter[S] = map(toConversion, fromConversion)
 
 
   /**
@@ -49,6 +53,36 @@ trait ValueReadWriter[T] extends ValueReader[T] with ValueWriter[T] {
       }
       result
     }
+  }
+
+
+  def option: ValueReadWriter[Option[T]] = new ValueReadWriter[Option[T]] {
+    override def read(deserializer: ObjectDeserializer): Option[T] =
+      Some(ValueReadWriter.this.read(deserializer))
+
+    override def getDefaultValue: Option[T] = None
+
+    override def write(serializer: ObjectSerializer, value: Option[T]): Unit =
+      value.foreach(ValueReadWriter.this.write(serializer, _))
+
+    override def isOmitted(value: Option[T]): Boolean = value.isEmpty
+  }
+
+
+  def nullable: ValueReadWriter[Option[T]] = new ValueReadWriter[Option[T]] {
+    override def read(deserializer: ObjectDeserializer): Option[T] =
+      if(deserializer.tryReadNullLiteral()) {
+        None
+      } else {
+        Some(ValueReadWriter.this.read(deserializer))
+      }
+
+    override def write(serializer: ObjectSerializer, value: Option[T]): Unit =
+      if(value.isEmpty) {
+        serializer.writeNull()
+      } else {
+        ValueReadWriter.this.write(serializer, value.get)
+      }
   }
 
 }

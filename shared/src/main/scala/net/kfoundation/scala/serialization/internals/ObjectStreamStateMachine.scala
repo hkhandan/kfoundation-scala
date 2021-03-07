@@ -41,7 +41,7 @@ class ObjectStreamStateMachine {
 
   private def validateTransition(s: State.Value): Unit = {
     val isAllowed: Boolean = state match {
-      case STREAM_BEGIN => s == OBJECT_BEGIN
+      case STREAM_BEGIN => s == OBJECT_BEGIN || s == COLLECTION_BEGIN
       case STREAM_END => false
       case OBJECT_BEGIN => s == PROPERTY || s == OBJECT_END
       case OBJECT_END => s == PROPERTY || s == OBJECT_END || s == COLLECTION_END || (s == OBJECT_BEGIN && isInCollection)

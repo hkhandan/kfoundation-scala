@@ -1,3 +1,4 @@
+
 # KFoundation: JVM/JS Edition
 
 KFoundation is a library of essentials for modern programming needs. 
@@ -12,10 +13,13 @@ This repository contains the JVM/JS edition. The main code is written in Scala,
 which is cross-compiled for JVM and JS, and wrapped inside friendly native 
 Java and JS APIs for the convenience of the users of those languages. 
 
-The JVM/JS edition is mostly concerned with semantics of data exchange. For example, 
-the (de)serialization module can read and write objects from and to XML, YAML, 
-JSON, and K4 out of the box, and can be extended for more. The native 
-[C++ edition](https://github.com/hkhandan/kfoundation) 
+The JVM/JS edition contains the following technologies:
+* Universal UI
+* Universal Serialization
+* Universal Culture
+* LoTeX
+
+The native [C++ edition](https://github.com/hkhandan/kfoundation) 
 is more extensive as it completely replaces (and does not depend on) C and C++ 
 standard libraries. 
 
@@ -26,10 +30,11 @@ http://kfoundation.net/
 
 
 
-## Complete Tutorial Video
+## Related Videos
 Everything you need to know to get started and make the best use of this library.
 
-https://mscp.co/resouces/video/kfoundation-tutorial.html
+Technologies Review: https://youtu.be/2rZhqUWhU24
+Universal Serialization: https://mscp.co/resouces/video/kfoundation-tutorial.html
 
 
 ## Patreon Page

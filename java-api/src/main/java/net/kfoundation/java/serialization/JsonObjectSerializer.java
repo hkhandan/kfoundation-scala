@@ -17,15 +17,13 @@ import java.io.OutputStream;
  * JSON object serializer
  */
 public class JsonObjectSerializer extends WrappedScalaObjectSerializer {
-
     public JsonObjectSerializer(OutputStream output, int indentSize) {
         super(net.kfoundation.scala.serialization.JsonObjectSerializer
-            .FACTORY().of(output, indentSize));
+            .FACTORY().of(output, indentSize, false));
     }
 
     public JsonObjectSerializer(OutputStream output) {
         super(net.kfoundation.scala.serialization.JsonObjectSerializer
-            .FACTORY().of(output));
+            .FACTORY().of(output, 2, false));
     }
-
 }

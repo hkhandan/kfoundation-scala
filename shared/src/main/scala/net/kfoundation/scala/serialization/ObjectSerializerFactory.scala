@@ -9,14 +9,23 @@
 
 package net.kfoundation.scala.serialization
 
-import java.io.OutputStream
+import net.kfoundation.scala.UString
+
+import java.io.{ByteArrayOutputStream, OutputStream}
 
 
 
 /** Common interface for serializer factories */
 trait ObjectSerializerFactory {
   def of(output: OutputStream, indentSize: Int, compact: Boolean): ObjectSerializer
-  def of(output: OutputStream): ObjectSerializer
-  def of(output: OutputStream, indentSize: Int): ObjectSerializer =
-    of(output, indentSize, false)
+
+  def getMediaType: UString
+
+  def toString[T](value: T)(implicit writer: ValueWriter[T]): UString = {
+    val output = new ByteArrayOutputStream()
+    writer.write(this, output, value)
+    val result = UString.of(output.toByteArray)
+    output.close()
+    result
+  }
 }

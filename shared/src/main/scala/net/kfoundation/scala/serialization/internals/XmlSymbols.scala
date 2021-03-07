@@ -10,7 +10,7 @@
 package net.kfoundation.scala.serialization.internals
 
 import net.kfoundation.scala.UChar
-import net.kfoundation.scala.UString.UStringInterpolation
+import net.kfoundation.scala.UString.Interpolator
 
 
 

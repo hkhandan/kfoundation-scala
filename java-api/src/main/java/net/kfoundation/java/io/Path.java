@@ -9,14 +9,14 @@
 
 package net.kfoundation.java.io;
 
-import scala.collection.Seq;
+import net.kfoundation.scala.UString;
 import scala.jdk.CollectionConverters;
 import scala.jdk.javaapi.OptionConverters;
 
 import java.io.*;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.stream.Collectors;
 
 
 /**
@@ -64,9 +64,11 @@ public class Path {
      * Returns individual segments of this path.
      */
     public List<String> segments() {
-        return CollectionConverters.<String>SeqHasAsJava(
-                (Seq<String>)impl.segments())
-            .asJava();
+        return CollectionConverters.SeqHasAsJava(impl.segments())
+            .asJava()
+            .stream()
+            .map(UString::toString)
+            .collect(Collectors.toList());
     }
 
 
@@ -74,7 +76,8 @@ public class Path {
      * Returns the last segment of this path if any.
      */
     public Optional<String> getFileName() {
-        return OptionConverters.<String>toJava(impl.getFileName());
+        return OptionConverters.toJava(impl.fileName())
+            .map(UString::toString);
     }
 
 
@@ -82,7 +85,8 @@ public class Path {
      * Returns the last portion of this path after a period '.' if any.
      */
     public Optional<String> getExtension() {
-        return OptionConverters.<String>toJava(impl.getExtension());
+        return OptionConverters.toJava(impl.extension())
+                .map(UString::toString);
     }
 
 
@@ -106,7 +110,7 @@ public class Path {
      * Gets the parent of this path, i.e. all segments minus the last one.
      */
     public net.kfoundation.scala.io.Path getParent() {
-        return impl.getParent();
+        return impl.parent();
     }
 
 
@@ -114,7 +118,7 @@ public class Path {
      * Opens an InputStream to read from the file pointed to by this path.
      */
     public FileInputStream getInputStream() {
-        return impl.getInputStream();
+        return impl.newInputStream();
     }
 
 
@@ -122,7 +126,7 @@ public class Path {
      * Opens an OutputStream to write to the file pointed to by this path.
      */
     public FileOutputStream getOutputStream() {
-        return impl.getOutputStream();
+        return impl.newOutputStream();
     }
 
 
@@ -130,7 +134,7 @@ public class Path {
      * Creates a FileReader to read from the file pointed to by this path.
      */
     public FileReader getReader() {
-        return impl.getReader();
+        return impl.newReader();
     }
 
 
@@ -138,7 +142,7 @@ public class Path {
      * Creates a FileWriter to write to the file pointed to by this path.
      */
     public FileWriter getWriter() {
-        return impl.getWriter();
+        return impl.newWriter();
     }
 
 
@@ -148,7 +152,7 @@ public class Path {
      * separator character.
      */
     public Path add(String segment) {
-        return of(impl.add(segment));
+        return of(impl.append(UString.of(segment)));
     }
 
 

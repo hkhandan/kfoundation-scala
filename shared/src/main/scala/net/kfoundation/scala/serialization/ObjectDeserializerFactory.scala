@@ -18,7 +18,13 @@ import net.kfoundation.scala.io.Path
 
 /** Common interface for deserializer factories */
 trait ObjectDeserializerFactory {
-  def of(str: UString): ObjectDeserializer
   def of(input: InputStream): ObjectDeserializer
-  def of(path: Path): ObjectDeserializer
+
+  def getMediaType: UString
+
+  def parse[T](str: UString)(implicit reader: ValueReader[T]): T =
+    reader.read(this, str)
+
+  def parse[T](path: Path)(implicit reader: ValueReader[T]): T =
+    reader.read(this, path)
 }

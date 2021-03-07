@@ -147,4 +147,6 @@ abstract class ObjectDeserializer {
       getCurrentLocation,
       "Missing expected property name"))
 
+
+  def select(fields: Seq[UString]): Unit = ()
 }

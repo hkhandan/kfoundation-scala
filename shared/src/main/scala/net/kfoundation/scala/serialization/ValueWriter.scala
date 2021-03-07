@@ -10,9 +10,10 @@
 package net.kfoundation.scala.serialization
 
 import java.io.{ByteArrayOutputStream, OutputStream}
-
 import net.kfoundation.scala.UString
 import net.kfoundation.scala.io.Path
+
+import scala.util.Using
 
 
 
@@ -28,17 +29,29 @@ trait ValueWriter[T] {
   def write(serializer: ObjectSerializer, value: T): Unit
 
 
+  def writeProperty(serializer: ObjectSerializer, name: UString, value: T):
+      Unit =
+    if(!isOmitted(value)) {
+      serializer.writePropertyName(name)
+      write(serializer, value)
+    }
+
+
+  def isOmitted(value: T): Boolean = false
+
+
   /**
    * Converts the given value to string using the serializer produced by
    * the given factory.
    */
-  def toString(factory: ObjectSerializerFactory, value: T): UString = {
-    val output = new ByteArrayOutputStream()
-    write(factory.of(output), value)
-    val result = UString.of(output.toByteArray)
-    output.close()
-    result
-  }
+  def toString(factory: ObjectSerializerFactory, value: T): UString =
+    Using(new ByteArrayOutputStream())(output => {
+      write(factory.of(output, 2, false), value)
+      val result = UString.of(output.toByteArray)
+      output.close()
+      result
+    })
+    .get
 
 
   /**
@@ -46,7 +59,7 @@ trait ValueWriter[T] {
    * obtained from the given factory.
    */
   def write(factory: ObjectSerializerFactory, output: OutputStream, value: T): Unit =
-    write(factory.of(output), value)
+    write(factory.of(output, 2, false), value)
 
 
   /**
@@ -54,14 +67,15 @@ trait ValueWriter[T] {
    * given factory.
    */
   def write(factory: ObjectSerializerFactory, path: Path, value: T): Unit =
-    write(factory.of(path.getOutputStream), value)
+    Using(path.newOutputStream)(
+      output => write(factory.of(output, 2, false), value))
 
 
   /**
    * Given a mapping from type S to T, produces a writer that can write values
    * of type S.
    */
-  def map[S](implicit conversion: S => T): ValueWriter[S] =
+  def mapWriter[S](implicit conversion: S => T): ValueWriter[S] =
     (serializer: ObjectSerializer, value: S) =>
       ValueWriter.this.write(serializer, conversion.apply(value))
 
@@ -69,11 +83,27 @@ trait ValueWriter[T] {
   /**
    * Produces a writer to serialize sequence of T.
    */
-  implicit def seqWriter: ValueWriter[Seq[T]] =
+  def seqWriter: ValueWriter[Seq[T]] =
     (serializer: ObjectSerializer, value: Seq[T]) => {
       serializer.writeCollectionBegin()
       value.foreach(write(serializer, _))
       serializer.writeCollectionEnd()
     }
 
+
+  def optionWriter: ValueWriter[Option[T]] = new ValueWriter[Option[T]] {
+    override def write(serializer: ObjectSerializer, value: Option[T]): Unit =
+      value.foreach(ValueWriter.this.write(serializer, _))
+
+    override def isOmitted(value: Option[T]): Boolean = value.isEmpty
+  }
+
+
+  def nullableWriter: ValueWriter[Option[T]] =
+    (serializer: ObjectSerializer, value: Option[T]) =>
+      if (value.isEmpty) {
+        serializer.writeNull()
+      } else {
+        ValueWriter.this.write(serializer, value.get)
+      }
 }

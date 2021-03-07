@@ -171,7 +171,7 @@ object UChar {
   /**
    * Reads the given UTF-8 encoded InputStream by its codepoints.
    */
-  class StreamUtf8Reader(private val stream: InputStream) extends Utf8Reader {
+  class StreamUtf8Reader(stream: InputStream) extends Utf8Reader {
     override def nextOctet: Int = stream.read()
     def mark(len: Int): Unit = stream.mark(len)
     def reset(): Unit = stream.reset()
@@ -232,6 +232,7 @@ object UChar {
     (input >>> 8) & 0xFF,
     (input >>> 16) & 0xFF,
     (input >>> 28) & 0xFF)
+
 
   /**
    * Returns the number of octets for the codepoint starting with the given
@@ -368,8 +369,6 @@ object UChar {
 
   /**
    * Creates a UChar from the given raw UTF-8 encoded character.
-   * @param utf8
-   * @return
    */
   def valueOfUtf8(utf8: Array[Byte]) = new UChar(decodeUtf8(utf8))
 
@@ -400,7 +399,9 @@ object UChar {
  * val ch: UChar = 'c'
  * </pre>
  */
-class UChar private (val codePoint: Int, private val utf8: Array[Byte]) {
+class UChar private (val codePoint: Int, private val utf8: Array[Byte])
+  extends UObject
+{
   import UChar._
 
   /**
@@ -508,4 +509,9 @@ class UChar private (val codePoint: Int, private val utf8: Array[Byte]) {
     case _ => false
   }
 
+
+  override def appendTo(builder: UString.Builder): Unit = builder.append(this)
+
+
+  override def toUString: UString = UString.of(utf8)
 }

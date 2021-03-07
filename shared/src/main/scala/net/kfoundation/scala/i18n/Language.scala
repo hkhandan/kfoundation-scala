@@ -1,11 +1,21 @@
-package net.kfoundation.scala.i18n
-import java.util.Locale
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
 
+package net.kfoundation.scala.i18n
+import net.kfoundation.scala.UString
+
+import java.util.Locale
 import scala.collection.mutable
 
 
 object Language {
-  private val allLanguages = new mutable.HashMap[String, Language]()
+  private val allLanguages = new mutable.HashMap[UString, Language]()
 
   val EN: Language = add(new Language("en", "eng"))
 
@@ -14,13 +24,13 @@ object Language {
     l
   }
 
-  private def getByIsoAlpha2(code: String): Language = add(new Language(code, code + "x"))
+  def getByIsoAlpha2(code: UString): Option[Language] = allLanguages.values
+    .find(_.isoAlpha2.equals(code))
 
-  private def getByIsoAlpha3(code: String): Language = allLanguages.values
+  def getByIsoAlpha3(code: UString): Option[Language] = allLanguages.values
     .find(_.isoAlpha3.equals(code))
-    .getOrElse(add(new Language(code.substring(0, 2), code)))
 
-  def of(isoAlpha2or3: String): Language = isoAlpha2or3.length match {
+  def of(isoAlpha2or3: UString): Option[Language] = isoAlpha2or3.length match {
     case 2 => getByIsoAlpha2(isoAlpha2or3)
     case 3 => getByIsoAlpha3(isoAlpha2or3)
     case _ => throw new IllegalArgumentException(
@@ -29,10 +39,23 @@ object Language {
 }
 
 
-class Language(val isoAlpha2: String, val isoAlpha3: String) extends LanguageLike {
+class Language(val isoAlpha2: UString, val isoAlpha3: UString) extends LanguageLike {
   private val _asDialect = new Dialect(this)
 
   override def asDialect: Dialect = _asDialect
   override def asLocale: Locale = _asDialect.asLocale
-  override def getIetfTag: String = _asDialect.getIetfTag
+  override def getIetfTag: UString = _asDialect.getIetfTag
+
+  override def toString: String = isoAlpha3.toString
+
+  override def equals(other: Any): Boolean = other match {
+    case that: Language =>
+        isoAlpha3 == that.isoAlpha3
+    case _ => false
+  }
+
+  override def hashCode(): Int = {
+    val state = Seq(isoAlpha3)
+    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+  }
 }

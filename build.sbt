@@ -9,8 +9,8 @@
 
 // --- Project Information --- //
 
-ThisBuild / name := "KFoundation-Scala"
-ThisBuild / version := "0.2.1"
+name := "KFoundation"
+ThisBuild / version := "0.3"
 ThisBuild / homepage := Some(url("https://mscp.co/kfoundation/about.html"))
 ThisBuild / organization := "net.kfoundation"
 ThisBuild / organizationName := "KFoundation Project"
@@ -72,6 +72,7 @@ val jsApi = project.in(file("js-api"))
   .dependsOn(shared)
   .settings(
     moduleName := "kfoundation-js",
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.1.0",
     (Compile / unmanagedSourceDirectories) += (shared / Compile / scalaSource).value,
     (Compile / unmanagedSourceDirectories) ++= (shared / Compile / managedSourceDirectories).value,
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) })

@@ -9,12 +9,11 @@
 
 package net.kfoundation.scala.parse.lex
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
-
 import net.kfoundation.scala.io.Path
-import net.kfoundation.scala.parse.{CodeLocation, CodeRange, MutableCodeLocation}
+import net.kfoundation.scala.parse._
 import net.kfoundation.scala.{UChar, UString}
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import scala.annotation.tailrec
 
 
@@ -23,11 +22,173 @@ import scala.annotation.tailrec
  * Factory for [[CodeWalker]] instances.
  */
 object CodeWalker {
+  trait PatternWalker {
+    def read(b: Int): PatternWalker
+    def read(predicate: Int => Boolean): PatternWalker
+    def readAll(predicate: Int => Boolean): PatternWalker
+    def read(ch: UChar): PatternWalker
+    def read(str: UString): PatternWalker
+    def test(b: Int): PatternWalker
+    def test(predicate: Int => Boolean): PatternWalker
+    def test(ch: UChar): PatternWalker
+    def test(str: UString): PatternWalker
+    def get: Option[UString]
+  }
+
+  private class PatternWalkerImpl(reader: UChar.StreamUtf8Reader,
+      begin: CodeLocation, commit: CodeLocation => ())
+    extends PatternWalker
+  {
+    private val buffer = new ByteArrayOutputStream()
+    private var failed: Boolean = false
+    private var recoverByte: Int = -1
+    private val end: MutableCodeLocation = begin
+
+    private def step(b: Int): Unit = {
+      buffer.write(b)
+      end.step(1)
+    }
+
+    private def testStep(): Unit = end.step(1)
+
+    private def read(): Int = {
+      if(recoverByte == -2) {
+        throw new IllegalStateException("PatternWalker can be used only once")
+      } else if(recoverByte == -1) {
+        reader.nextOctet
+      } else {
+        val b = recoverByte
+        recoverByte = -1
+        b
+      }
+    }
+
+    private def fail(): Unit = {
+      failed = true
+      reader.reset()
+    }
+
+    override def read(b: Int): PatternWalker = {
+      if(!failed) {
+        if(read() != b) {
+          fail()
+        } else {
+          step(b)
+        }
+      }
+      this
+    }
+
+    override def read(predicate: Int => Boolean): PatternWalker = {
+      val b = read()
+      if(!failed) {
+        if(!predicate(b)) {
+          fail()
+        } else {
+          step(b)
+        }
+      }
+      this
+    }
+
+    override def readAll(predicate: Int => Boolean): PatternWalker = {
+      var b = read()
+      while(b != -1 && predicate(b)) {
+        step(b)
+        b = read()
+      }
+      recoverByte = b
+      this
+    }
+
+    private def read(bytes: Array[Byte]): PatternWalker = {
+      @tailrec
+      def tryReadNext(i: Int, b: Int): Boolean =
+        if(b == bytes(i)) {
+          step(b)
+          if (i == bytes.length) {
+            true
+          } else {
+            tryReadNext(i + 1, read())
+          }
+        } else {
+          false
+        }
+      if(!failed && !tryReadNext(0, read())) {
+        fail()
+      }
+      this
+    }
+
+    override def read(ch: UChar): PatternWalker = read(ch.toUtf8)
+
+    override def read(str: UString): PatternWalker = read(str.toUtf8)
+
+    override def test(b: Int): PatternWalker = {
+      if(!failed) {
+        if(read() != b) {
+          fail()
+        } else {
+          testStep()
+        }
+      }
+      this
+    }
+
+    override def test(predicate: Int => Boolean): PatternWalker = {
+      if(!failed) {
+        if(!predicate(read())) {
+          fail()
+        } else {
+          testStep()
+        }
+      }
+      this
+    }
+
+    private def test(bytes: Array[Byte]): PatternWalker = {
+      @tailrec
+      def tryReadNext(i: Int, b: Int): Boolean =
+        if(b == bytes(i)) {
+          testStep()
+          if (i == bytes.length) {
+            true
+          } else {
+            tryReadNext(i + b, read())
+          }
+        } else {
+          false
+        }
+      if(!failed && !tryReadNext(0, read())) {
+        fail()
+      }
+      this
+    }
+
+    override def test(ch: UChar): PatternWalker = test(ch.toUtf8)
+
+    override def test(str: UString): PatternWalker = test(str.toUtf8)
+
+    override def get: Option[UString] = {
+      recoverByte = -2
+      if(failed)
+        None
+      else {
+        commit(end.immutableCopy)
+        Some(UString.of(buffer.toByteArray))
+      }
+    }
+  }
+
+
   type PatternCheckFunction = (Int, Boolean) => Boolean
 
   private val LF: Byte = 13
   private val CR: Byte = 10
   private val SPACE: Byte = 32
+  private val ROW: UString = "row"
+  private val COL: UString = "col"
+  val NOT_FOUND: Int = -1
 
 
   /**
@@ -47,9 +208,9 @@ object CodeWalker {
    * Produces a CodeWalker for reading file pointed by the given path.
    */
   def of(path: Path) = new CodeWalker(
-    path.getFileName
+    path.fileName.map(_.toString)
       .getOrElse("<file>"),
-    path.getInputStream)
+    path.newInputStream)
 }
 
 
@@ -165,6 +326,13 @@ class CodeWalker(inputName: String, input: InputStream) {
     new LexicalError(getCurrentLocation, message)
 
 
+  def parseError(key: UString,
+      params: (UString, UString)*): ParseError =
+    new ParseError(key, params :+
+      (ROW, UString.of(end.getRow)) :+
+      (COL, UString.of(end.getCol)) :_*)
+
+
   private def tryRead(b: Byte): Boolean = {
     reader.mark(1)
     if(reader.nextOctet == b) {
@@ -238,7 +406,8 @@ class CodeWalker(inputName: String, input: InputStream) {
 
   /**
    * With input being UTF8-encoded, reads one unicode codepoint satisfying the
-   * given criteria, and returns its value if succeeds. Otherwise, returns -1.
+   * given criteria, and returns its value if succeeds. Otherwise, returns
+   * NOT_FOUND (-1).
    */
   def tryRead(test: Int => Boolean): Int = {
     reader.mark(8)
@@ -248,7 +417,19 @@ class CodeWalker(inputName: String, input: InputStream) {
       ch
     } else {
       reader.reset()
-      -1
+      NOT_FOUND
+    }
+  }
+
+  def tryRead(codePoint: Int): Boolean = {
+    reader.mark(8)
+    val ch = reader.nextCodePoint
+    if(ch == codePoint) {
+      step()
+      true
+    } else {
+      reader.reset()
+      false
     }
   }
 
@@ -264,7 +445,7 @@ class CodeWalker(inputName: String, input: InputStream) {
       ch - '0'
     } else {
       reader.reset()
-      -1
+      NOT_FOUND
     }
   }
 
@@ -345,6 +526,14 @@ class CodeWalker(inputName: String, input: InputStream) {
   }
 
 
-  override def toString: String = "End: " + `end`.toString
+  def patternWalker(ahead: Int): PatternWalker = {
+    reader.mark(ahead)
+    new PatternWalkerImpl(reader, end.immutableCopy, e => {
+      end.set(e)
+      begin = e
+    })
+  }
 
+
+  override def toString: String = "End: " + `end`.toString
 }

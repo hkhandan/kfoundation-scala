@@ -9,8 +9,6 @@
 
 package net.kfoundation.scala.serialization
 
-import java.io.{ByteArrayOutputStream, InputStream}
-
 import net.kfoundation.scala.UString
 import net.kfoundation.scala.encoding.XmlEscape
 import net.kfoundation.scala.io.Path
@@ -20,6 +18,7 @@ import net.kfoundation.scala.serialization.internals.CommonSymbols._
 import net.kfoundation.scala.serialization.internals.ObjectStreamStateMachine
 import net.kfoundation.scala.serialization.internals.XmlSymbols._
 
+import java.io.{ByteArrayOutputStream, InputStream}
 import scala.annotation.tailrec
 
 
@@ -93,15 +92,13 @@ object XmlObjectDeserializer {
     }
   }
 
-  val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
-    override def of(str: UString): ObjectDeserializer =
-      new XmlObjectDeserializer(CodeWalker.of(str))
+  val MIME_TYPE: UString = "application/xml"
 
+  val FACTORY: ObjectDeserializerFactory = new ObjectDeserializerFactory {
     override def of(input: InputStream): ObjectDeserializer =
       new XmlObjectDeserializer(CodeWalker.of(input))
 
-    override def of(path: Path): ObjectDeserializer
-    = new XmlObjectDeserializer(CodeWalker.of(path))
+    override def getMediaType: UString = MIME_TYPE
   }
 }
 

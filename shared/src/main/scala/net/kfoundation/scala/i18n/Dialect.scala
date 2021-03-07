@@ -1,49 +1,57 @@
+// --------------------------------------------------------------------------
+//   ██╗  ██╗███████╗
+//   ██║ ██╔╝██╔════╝   The KFoundation Project (www.kfoundation.net)
+//   █████╔╝ █████╗     KFoundation for Scala Library
+//   ██╔═██╗ ██╔══╝     Copyright (c) 2020 Mindscape Inc.
+//   ██║  ██╗██║        Terms of KnoRBA Free Public License Agreement Apply
+//   ╚═╝  ╚═╝╚═╝
+// --------------------------------------------------------------------------
+
 package net.kfoundation.scala.i18n
 
-import java.util.Locale
+import net.kfoundation.scala.UString
+import net.kfoundation.scala.UString.Interpolator
+import net.kfoundation.scala.serialization.ValueReadWriter
+import net.kfoundation.scala.serialization.ValueReadWriters.STRING
 
+import java.util.Locale
 import scala.collection.mutable
 
 
 object Dialect {
-  private val allDialects = new mutable.HashMap[String, Dialect]()
+  trait DialectFactory {
+    def of(name: UString): Option[Dialect]
+  }
+
+  private val allDialects = new mutable.HashMap[UString, Dialect]()
 
   val EN_US: Dialect = add(new Dialect(Language.EN, Some(Country.USA), None))
-  val EN_GB: Dialect = add(new Dialect(Language.EN, Some(Country.GBR), None))
+
+  val DEFAULT_FACTORY: DialectFactory =
+    (name: UString) => allDialects.get(name)
+
+  def rw(factory: DialectFactory): ValueReadWriter[Dialect] =
+    STRING.map(
+      toConversion = str => factory.of(str)
+        .getOrElse(throw new LException("INVALID_LANGUAGE", U"was"->str)),
+      fromConversion = _.getIetfTag)
 
   private def add(d: Dialect): Dialect = {
     allDialects.put(d.getIetfTag, d)
     d
   }
 
-  def of(languageTag: String): Dialect =
-    allDialects.getOrElseUpdate(languageTag, {
-      val parts = languageTag.split("-")
-      if(parts.length < 1) {
-        throw new IllegalArgumentException(
-          s"Bad language tag format. Should be lang[-region[-script]]. Was: $languageTag")
-      }
-
-      val language = Language.of(parts(0))
-
-      val region: Option[Region] =
-        if(parts.length > 1) Region.of(parts(1))
-        else None
-
-      val script: Option[Script] =
-        if(parts.length > 2) Some(new Script(parts.drop(2).mkString("-")))
-        else None
-
-      new Dialect(language, region, script)
-    })
+  def of(languageTag: String): Option[Dialect] =
+    allDialects.get(languageTag)
 }
 
-
+/** A dialect is a language, or a variant of a language. */
 class Dialect(
-  val language: Language,
-  val region: Option[Region],
-  val script: Option[Script])
-extends LanguageLike {
+    val language: Language,
+    val region: Option[Region],
+    val script: Option[Script])
+  extends LanguageLike
+{
   def this(language: Language) = this(language, None, None)
   def this(language: Language, region: Region) = this(language, Some(region), None)
 
@@ -71,7 +79,9 @@ extends LanguageLike {
 
   override def asDialect: Dialect = this
 
-  override def getIetfTag: String = language.isoAlpha2 +
-    script.map(_.code).getOrElse("") +
+  override def getIetfTag: UString = language.isoAlpha2 +
+    script.map("-" + _.code).getOrElse("") +
     getRegionCode.map("-" + _).getOrElse("")
+
+  override def toString: String = getIetfTag.toString
 }

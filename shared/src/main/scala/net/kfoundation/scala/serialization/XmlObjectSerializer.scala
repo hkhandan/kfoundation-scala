@@ -18,15 +18,14 @@ import net.kfoundation.scala.serialization.internals.{IndentingWriter, ObjectStr
 
 object XmlObjectSerializer {
   val DEFAULT_INDENT_SIZE = 4
-
+  val MIME_TYPE: UString = "application/xml"
 
   val FACTORY: ObjectSerializerFactory = new ObjectSerializerFactory {
     override def of(output: OutputStream, indentSize: Int, compact: Boolean):
     ObjectSerializer =
       new XmlObjectSerializer(new IndentingWriter(output, indentSize, compact))
 
-    override def of(output: OutputStream): ObjectSerializer =
-      of(output, DEFAULT_INDENT_SIZE, false)
+    override def getMediaType: UString = MIME_TYPE
   }
 }
 

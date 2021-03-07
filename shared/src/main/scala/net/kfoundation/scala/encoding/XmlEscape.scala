@@ -9,7 +9,7 @@
 
 package net.kfoundation.scala.encoding
 
-import net.kfoundation.scala.UString.UStringInterpolation
+import net.kfoundation.scala.UString.Interpolator
 import net.kfoundation.scala.{UChar, UString}
 
 

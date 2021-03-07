@@ -1,6 +1,6 @@
 {
   "name": "kfoundation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "KFoundation JavaScript Library",
   "main": "js-api/target/scala-2.13/jsapi-opt.js",
   "scripts": {
